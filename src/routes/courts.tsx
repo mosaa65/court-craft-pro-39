@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { Search } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { courts, todaysBookings } from "@/lib/mock";
+import { bookingsQuery, courtsQuery, localDateKey } from "@/lib/bookings.queries";
 
 export const Route = createFileRoute("/courts")({
   head: () => ({
@@ -10,10 +12,21 @@ export const Route = createFileRoute("/courts")({
       { name: "description", content: "جميع الملاعب وحالتها الحالية والأسعار." },
     ],
   }),
+  loader: ({ context }) => {
+    context.queryClient.ensureQueryData(courtsQuery);
+    context.queryClient.ensureQueryData(bookingsQuery({ date: localDateKey() }));
+  },
   component: CourtsPage,
 });
 
 function CourtsPage() {
+  const { data: courts } = useSuspenseQuery(courtsQuery);
+  const { data: todaysBookings } = useSuspenseQuery(bookingsQuery({ date: localDateKey() }));
+  const [q, setQ] = useState("");
+  const filtered = courts.filter(
+    (c) => c.name.toLowerCase().includes(q.toLowerCase()) || c.sportLabel.includes(q),
+  );
+
   return (
     <AppShell>
       <header className="sticky top-0 z-30 bg-background/85 px-6 pb-4 pt-8 backdrop-blur-md">
@@ -25,6 +38,8 @@ function CourtsPage() {
         <div className="relative mt-5">
           <Search className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
             placeholder="ابحث عن ملعب أو رياضة"
             className="h-12 w-full rounded-2xl border border-stone-line bg-card px-4 pr-11 text-sm font-medium placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
           />
@@ -32,8 +47,10 @@ function CourtsPage() {
       </header>
 
       <main className="space-y-4 px-5 pt-6">
-        {courts.map((c, i) => {
-          const bookingCount = todaysBookings.filter((b) => b.courtId === c.id).length;
+        {filtered.map((c, i) => {
+          const bookingCount = todaysBookings.filter(
+            (b) => b.courtId === c.id && b.status !== "cancelled",
+          ).length;
           const busy = bookingCount > 1;
           return (
             <article
@@ -73,7 +90,7 @@ function CourtsPage() {
 
               <div className="grid grid-cols-3 divide-x divide-stone-line/70 divide-x-reverse">
                 <Stat label="حجوزات اليوم" value={String(bookingCount)} />
-                <Stat label="الفترات المتاحة" value={String(14 - bookingCount)} />
+                <Stat label="الفترات المتاحة" value={String(Math.max(0, 14 - bookingCount))} />
                 <Stat label="السعر" value={`${c.pricePerHour} ر.س`} />
               </div>
             </article>

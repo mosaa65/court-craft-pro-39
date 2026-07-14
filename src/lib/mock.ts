@@ -1,3 +1,5 @@
+// Shared types, helpers, and image map. NO hardcoded booking/court data — data lives in the database.
+
 import courtPadel from "@/assets/court-padel.jpg";
 import courtFootball from "@/assets/court-football.jpg";
 import courtBasket from "@/assets/court-basket.jpg";
@@ -15,46 +17,12 @@ export type Court = {
   surface: string;
 };
 
-export const courts: Court[] = [
-  {
-    id: "padel-1",
-    name: "بادل — الملعب الرئيسي",
-    sport: "padel",
-    sportLabel: "بادل",
-    image: courtPadel,
-    pricePerHour: 150,
-    surface: "عشب صناعي أزرق",
-  },
-  {
-    id: "football-a",
-    name: "كرة القدم — الملعب أ",
-    sport: "football",
-    sportLabel: "كرة القدم",
-    image: courtFootball,
-    pricePerHour: 350,
-    surface: "عشب طبيعي",
-  },
-  {
-    id: "tennis-1",
-    name: "التنس — كورت رقم ١",
-    sport: "tennis",
-    sportLabel: "تنس",
-    image: courtTennis,
-    pricePerHour: 200,
-    surface: "طيني",
-  },
-  {
-    id: "basket-1",
-    name: "السلة — الصالة المغطاة",
-    sport: "basket",
-    sportLabel: "سلة",
-    image: courtBasket,
-    pricePerHour: 180,
-    surface: "خشب مصقول",
-  },
-];
-
-export type BookingStatus = "confirmed" | "pending" | "training" | "maintenance";
+export type BookingStatus =
+  | "confirmed"
+  | "pending"
+  | "training"
+  | "maintenance"
+  | "cancelled";
 
 export type Booking = {
   id: string;
@@ -63,19 +31,19 @@ export type Booking = {
   phone: string;
   start: string; // "HH:MM"
   end: string;   // "HH:MM"
+  startAt: string; // ISO
+  endAt: string;   // ISO
   status: BookingStatus;
   price: number;
+  notes: string;
 };
 
-export const todaysBookings: Booking[] = [
-  { id: "b1", courtId: "padel-1", customer: "أحمد العتيبي", phone: "0551234567", start: "10:00", end: "11:30", status: "confirmed", price: 225 },
-  { id: "b2", courtId: "football-a", customer: "فريق الأساطير", phone: "0559988776", start: "11:00", end: "12:30", status: "confirmed", price: 525 },
-  { id: "b3", courtId: "padel-1", customer: "سارة المنصور", phone: "0553344556", start: "13:00", end: "14:00", status: "pending", price: 150 },
-  { id: "b4", courtId: "tennis-1", customer: "خالد الشمري", phone: "0557788990", start: "14:00", end: "15:30", status: "confirmed", price: 300 },
-  { id: "b5", courtId: "basket-1", customer: "المدرب مارك — تدريب خاص", phone: "0552211334", start: "16:00", end: "17:00", status: "training", price: 180 },
-  { id: "b6", courtId: "football-a", customer: "صيانة دورية", phone: "—", start: "18:00", end: "19:00", status: "maintenance", price: 0 },
-  { id: "b7", courtId: "padel-1", customer: "فهد العبدالله", phone: "0554455667", start: "20:00", end: "21:30", status: "confirmed", price: 225 },
-];
+export const SPORT_IMAGES: Record<string, string> = {
+  padel: courtPadel,
+  football: courtFootball,
+  tennis: courtTennis,
+  basket: courtBasket,
+};
 
 export const HOURS = Array.from({ length: 14 }, (_, i) => 9 + i); // 09..22
 
@@ -89,11 +57,9 @@ export function statusMeta(status: BookingStatus) {
       return { label: "تدريب", tone: "bg-ink text-white" };
     case "maintenance":
       return { label: "صيانة", tone: "bg-muted text-muted-foreground" };
+    case "cancelled":
+      return { label: "ملغى", tone: "bg-destructive/10 text-destructive" };
   }
-}
-
-export function courtById(id: string) {
-  return courts.find((c) => c.id === id);
 }
 
 const AR_WEEKDAYS = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
@@ -107,7 +73,6 @@ export function toArabicDigits(input: number | string) {
   return String(input).replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[Number(d)]);
 }
 
-/** Deterministic Arabic gregorian formatter (SSR-safe, no ICU). */
 export function formatDate(
   d: Date,
   parts: { weekday?: "long" | "short"; day?: boolean; month?: boolean; year?: boolean } = {
@@ -134,12 +99,29 @@ export function todayLabel() {
 export function greeting() {
   const h = new Date().getHours();
   if (h < 12) return "صباح الخير";
-  if (h < 18) return "مساء الخير";
   return "مساء الخير";
 }
 
-/** Convert "HH:MM" to fractional hour */
 export function toHour(t: string) {
   const [h, m] = t.split(":").map(Number);
   return h + m / 60;
+}
+
+/** Extract HH:MM (local time) from ISO timestamp. */
+export function hhmm(iso: string) {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+/** Duration in minutes between two ISO timestamps. */
+export function durationMinutes(startIso: string, endIso: string) {
+  return Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 60000);
+}
+
+export function formatDuration(mins: number) {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h && m) return `${toArabicDigits(h)} س ${toArabicDigits(m)} د`;
+  if (h) return `${toArabicDigits(h)} ساعة`;
+  return `${toArabicDigits(m)} دقيقة`;
 }
