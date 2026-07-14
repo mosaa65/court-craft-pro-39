@@ -1,0 +1,72 @@
+import { Link, useRouterState } from "@tanstack/react-router";
+import { Home, CalendarDays, LayoutGrid, Plus, Menu } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { BookingSheet } from "./booking-sheet";
+import { cn } from "@/lib/utils";
+
+type Tab = {
+  to: "/" | "/calendar" | "/courts" | "/more";
+  label: string;
+  icon: typeof Home;
+  exact?: boolean;
+};
+
+const tabs: Tab[] = [
+  { to: "/", label: "الرئيسية", icon: Home, exact: true },
+  { to: "/calendar", label: "التقويم", icon: CalendarDays },
+  { to: "/courts", label: "الملاعب", icon: LayoutGrid },
+  { to: "/more", label: "المزيد", icon: Menu },
+];
+
+export function AppShell({ children }: { children: ReactNode }) {
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  return (
+    <div dir="rtl" className="min-h-screen bg-background text-foreground font-sans pb-32 selection:bg-primary/20">
+      <div className="mx-auto w-full max-w-[440px]">{children}</div>
+
+      {/* Floating bottom nav */}
+      <nav
+        aria-label="التنقل الرئيسي"
+        className="fixed bottom-4 left-1/2 z-40 flex h-16 w-[92%] max-w-[400px] -translate-x-1/2 items-center justify-between rounded-full bg-ink/95 px-3 shadow-[0_20px_60px_-15px_oklch(0.15_0.04_258/0.35)] backdrop-blur-xl"
+      >
+        {tabs.slice(0, 2).map((t) => (
+          <TabButton key={t.to} tab={t} pathname={pathname} />
+        ))}
+
+        <button
+          type="button"
+          onClick={() => setSheetOpen(true)}
+          aria-label="حجز جديد"
+          className="grid size-14 -translate-y-6 place-items-center rounded-full bg-primary text-primary-foreground shadow-[var(--shadow-pitch)] ring-4 ring-background transition-transform active:scale-95"
+        >
+          <Plus className="size-6" strokeWidth={2.5} />
+        </button>
+
+        {tabs.slice(2).map((t) => (
+          <TabButton key={t.to} tab={t} pathname={pathname} />
+        ))}
+      </nav>
+
+      <BookingSheet open={sheetOpen} onOpenChange={setSheetOpen} />
+    </div>
+  );
+}
+
+function TabButton({ tab, pathname }: { tab: Tab; pathname: string }) {
+  const active = tab.exact ? pathname === tab.to : pathname.startsWith(tab.to);
+  const Icon = tab.icon;
+  return (
+    <Link
+      to={tab.to}
+      className={cn(
+        "flex h-12 w-16 flex-col items-center justify-center gap-0.5 rounded-2xl transition-colors",
+        active ? "text-primary" : "text-white/60 hover:text-white",
+      )}
+    >
+      <Icon className="size-[18px]" strokeWidth={active ? 2.4 : 1.8} />
+      <span className="text-[10px] font-semibold tracking-wide">{tab.label}</span>
+    </Link>
+  );
+}
