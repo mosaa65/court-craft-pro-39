@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { ChevronRight, ChevronLeft } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { courts, todaysBookings, courtById, HOURS, toHour, statusMeta, formatDate, toArabicDigits, AR_MONTHS_EXPORT as _M } from "@/lib/mock";
+import { courts, todaysBookings, courtById, HOURS, toHour, statusMeta, formatDate, toArabicDigits } from "@/lib/mock";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/calendar")({
