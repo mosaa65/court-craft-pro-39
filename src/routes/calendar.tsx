@@ -36,9 +36,7 @@ function CalendarPage() {
     bookedByHour.set(s, b);
   });
 
-  const dayFmt = new Intl.DateTimeFormat("ar-u-ca-gregory", { weekday: "short", calendar: "gregory" });
-  const dayNum = new Intl.DateTimeFormat("ar-u-ca-gregory", { day: "numeric", calendar: "gregory", numberingSystem: "arab" });
-  const monthFmt = new Intl.DateTimeFormat("ar-u-ca-gregory", { month: "long", year: "numeric", calendar: "gregory", numberingSystem: "arab" });
+  const monthLabel = formatDate(selectedDay, { month: true, year: true });
 
   return (
     <AppShell>
