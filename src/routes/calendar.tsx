@@ -44,7 +44,7 @@ function CalendarPage() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-              {monthFmt.format(selectedDay)}
+              {monthLabel}
             </p>
             <h1 className="mt-1 text-xl font-bold tracking-tight">التقويم</h1>
           </div>
