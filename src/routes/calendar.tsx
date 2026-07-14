@@ -74,9 +74,9 @@ function CalendarPage() {
                 )}
               >
                 <span className={cn("text-[10px] font-semibold", active ? "text-white/60" : "text-muted-foreground")}>
-                  {dayFmt.format(d)}
+                  {formatDate(d, { weekday: "short" })}
                 </span>
-                <span className="mt-1 text-lg font-bold tabular">{dayNum.format(d)}</span>
+                <span className="mt-1 text-lg font-bold tabular">{toArabicDigits(d.getDate())}</span>
                 {i === 2 && (
                   <span
                     className={cn(
