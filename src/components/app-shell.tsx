@@ -1,11 +1,11 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, CalendarDays, LayoutGrid, Plus, Menu } from "lucide-react";
+import { Home, CalendarDays, LayoutGrid, Plus, ListChecks } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { BookingSheet } from "./booking-sheet";
 import { cn } from "@/lib/utils";
 
 type Tab = {
-  to: "/" | "/calendar" | "/courts" | "/more";
+  to: "/" | "/calendar" | "/bookings" | "/courts";
   label: string;
   icon: typeof Home;
   exact?: boolean;
@@ -14,8 +14,8 @@ type Tab = {
 const tabs: Tab[] = [
   { to: "/", label: "الرئيسية", icon: Home, exact: true },
   { to: "/calendar", label: "التقويم", icon: CalendarDays },
+  { to: "/bookings", label: "الحجوزات", icon: ListChecks },
   { to: "/courts", label: "الملاعب", icon: LayoutGrid },
-  { to: "/more", label: "المزيد", icon: Menu },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -26,7 +26,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div dir="rtl" className="min-h-screen bg-background text-foreground font-sans pb-32 selection:bg-primary/20">
       <div className="mx-auto w-full max-w-[440px]">{children}</div>
 
-      {/* Floating bottom nav */}
       <nav
         aria-label="التنقل الرئيسي"
         className="fixed bottom-4 left-1/2 z-40 flex h-16 w-[92%] max-w-[400px] -translate-x-1/2 items-center justify-between rounded-full bg-ink/95 px-3 shadow-[0_20px_60px_-15px_oklch(0.15_0.04_258/0.35)] backdrop-blur-xl"

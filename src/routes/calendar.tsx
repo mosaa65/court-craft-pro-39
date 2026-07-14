@@ -1,8 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { ChevronRight, ChevronLeft } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { courts, todaysBookings, courtById, HOURS, toHour, statusMeta, formatDate, toArabicDigits } from "@/lib/mock";
+import { HOURS, formatDate, toArabicDigits, statusMeta } from "@/lib/mock";
+import { bookingsQuery, courtsQuery, localDateKey } from "@/lib/bookings.queries";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/calendar")({
@@ -12,12 +14,17 @@ export const Route = createFileRoute("/calendar")({
       { name: "description", content: "تقويم يومي احترافي لعرض حجوزات الملاعب وحالة كل ساعة." },
     ],
   }),
+  loader: ({ context }) => {
+    context.queryClient.ensureQueryData(courtsQuery);
+    context.queryClient.ensureQueryData(bookingsQuery({ date: localDateKey() }));
+  },
   component: CalendarPage,
 });
 
 function CalendarPage() {
   const [dayOffset, setDayOffset] = useState(0);
-  const [courtId, setCourtId] = useState<string>(courts[0].id);
+  const { data: courts } = useSuspenseQuery(courtsQuery);
+  const [courtId, setCourtId] = useState<string>(courts[0]?.id ?? "");
 
   const days = useMemo(() => {
     const base = new Date();
@@ -29,12 +36,17 @@ function CalendarPage() {
   }, []);
 
   const selectedDay = days[2 + dayOffset] ?? days[2];
-  const bookings = todaysBookings.filter((b) => b.courtId === courtId);
+  const dateKey = localDateKey(selectedDay);
+  const { data: bookings = [] } = useSuspenseQuery(bookingsQuery({ date: dateKey, courtId }));
+  const courtById = (id: string) => courts.find((c) => c.id === id);
+
   const bookedByHour = new Map<number, (typeof bookings)[number]>();
-  bookings.forEach((b) => {
-    const s = Math.floor(toHour(b.start));
-    bookedByHour.set(s, b);
-  });
+  bookings
+    .filter((b) => b.status !== "cancelled")
+    .forEach((b) => {
+      const s = new Date(b.startAt).getHours();
+      bookedByHour.set(s, b);
+    });
 
   const monthLabel = formatDate(selectedDay, { month: true, year: true });
 
@@ -58,7 +70,6 @@ function CalendarPage() {
           </div>
         </div>
 
-        {/* Day strip */}
         <div className="no-scrollbar -mx-6 mt-5 flex gap-2 overflow-x-auto px-6">
           {days.map((d, i) => {
             const active = i - 2 === dayOffset;
@@ -78,12 +89,7 @@ function CalendarPage() {
                 </span>
                 <span className="mt-1 text-lg font-bold tabular">{toArabicDigits(d.getDate())}</span>
                 {i === 2 && (
-                  <span
-                    className={cn(
-                      "mt-1 size-1 rounded-full",
-                      active ? "bg-primary" : "bg-primary/70",
-                    )}
-                  />
+                  <span className={cn("mt-1 size-1 rounded-full", active ? "bg-primary" : "bg-primary/70")} />
                 )}
               </button>
             );
@@ -92,7 +98,6 @@ function CalendarPage() {
       </header>
 
       <main className="space-y-6 px-5 pt-6">
-        {/* Court tabs */}
         <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5">
           {courts.map((c) => {
             const active = courtId === c.id;
@@ -113,7 +118,6 @@ function CalendarPage() {
           })}
         </div>
 
-        {/* Timeline */}
         <section className="card-elev overflow-hidden">
           <div className="flex items-center justify-between border-b border-stone-line/70 px-5 py-4">
             <div>
@@ -140,9 +144,11 @@ function CalendarPage() {
                     {label}
                   </div>
                   {b ? (
-                    <div
+                    <Link
+                      to="/bookings/$id"
+                      params={{ id: b.id }}
                       className={cn(
-                        "flex-1 rounded-2xl px-4 py-3 border-r-4 shadow-sm animate-slot",
+                        "flex-1 rounded-2xl px-4 py-3 border-r-4 shadow-sm animate-slot transition active:scale-[0.99]",
                         b.status === "confirmed" && "bg-primary/8 border-primary",
                         b.status === "pending" &&
                           "bg-[color:var(--color-warn)]/10 border-[color:var(--color-warn)]",
@@ -151,12 +157,7 @@ function CalendarPage() {
                       )}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <p
-                          className={cn(
-                            "truncate text-sm font-bold",
-                            b.status === "training" && "text-white",
-                          )}
-                        >
+                        <p className={cn("truncate text-sm font-bold", b.status === "training" && "text-white")}>
                           {b.customer}
                         </p>
                         <span
@@ -177,11 +178,11 @@ function CalendarPage() {
                         {b.start} — {b.end}
                         {b.price > 0 && <> • {b.price} ر.س</>}
                       </p>
-                    </div>
+                    </Link>
                   ) : (
-                    <button className="flex-1 rounded-2xl border border-dashed border-stone-line px-4 py-3 text-right text-[11px] font-semibold text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary">
-                      متاح — اضغط لإنشاء حجز
-                    </button>
+                    <div className="flex-1 rounded-2xl border border-dashed border-stone-line px-4 py-3 text-right text-[11px] font-semibold text-muted-foreground">
+                      متاح
+                    </div>
                   )}
                 </li>
               );
