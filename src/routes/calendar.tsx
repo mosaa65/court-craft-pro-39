@@ -3,7 +3,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { ChevronRight, ChevronLeft } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { HOURS, formatDate, toArabicDigits, statusMeta } from "@/lib/mock";
+import { HOURS, formatDate, toArabicDigits, statusMeta, formatTime12 } from "@/lib/mock";
 import { bookingsQuery, courtsQuery, localDateKey } from "@/lib/bookings.queries";
 import { cn } from "@/lib/utils";
 
@@ -70,27 +70,41 @@ function CalendarPage() {
           </div>
         </div>
 
-        <div className="no-scrollbar -mx-6 mt-5 flex gap-2 overflow-x-auto px-6">
+        <div className="no-scrollbar -mx-6 mt-5 flex gap-3 overflow-x-auto px-6 pb-1">
           {days.map((d, i) => {
             const active = i - 2 === dayOffset;
+            const isToday = i === 2;
             return (
               <button
                 key={i}
                 onClick={() => setDayOffset(i - 2)}
                 className={cn(
-                  "flex h-16 w-14 shrink-0 flex-col items-center justify-center rounded-2xl border transition-all",
-                  active
-                    ? "border-transparent bg-ink text-white shadow-[var(--shadow-elev-2)]"
-                    : "border-stone-line bg-card text-foreground",
+                  "group flex shrink-0 flex-col items-center gap-1.5",
                 )}
               >
-                <span className={cn("text-[10px] font-semibold", active ? "text-white/60" : "text-muted-foreground")}>
+                <span
+                  className={cn(
+                    "text-[10px] font-bold tracking-wider transition",
+                    active ? "text-foreground" : "text-muted-foreground",
+                  )}
+                >
                   {formatDate(d, { weekday: "short" })}
                 </span>
-                <span className="mt-1 text-lg font-bold tabular">{toArabicDigits(d.getDate())}</span>
-                {i === 2 && (
-                  <span className={cn("mt-1 size-1 rounded-full", active ? "bg-primary" : "bg-primary/70")} />
-                )}
+                <span
+                  className={cn(
+                    "tabular relative grid size-14 place-items-center rounded-full border-2 text-lg font-bold transition-all",
+                    active
+                      ? "border-transparent bg-ink text-white shadow-[var(--shadow-elev-2)]"
+                      : isToday
+                        ? "border-primary/50 bg-primary/5 text-primary"
+                        : "border-stone-line bg-card text-foreground",
+                  )}
+                >
+                  {toArabicDigits(d.getDate())}
+                  {isToday && !active && (
+                    <span className="absolute -bottom-0.5 left-1/2 size-1 -translate-x-1/2 rounded-full bg-primary" />
+                  )}
+                </span>
               </button>
             );
           })}
@@ -135,13 +149,14 @@ function CalendarPage() {
 
           <ol className="divide-y divide-stone-line/70">
             {HOURS.map((h) => {
-              const label = `${String(h).padStart(2, "0")}:00`;
+              const label24 = `${String(h).padStart(2, "0")}:00`;
+              const label12 = formatTime12(label24);
               const b = bookedByHour.get(h);
               const meta = b ? statusMeta(b.status) : null;
               return (
                 <li key={h} className="flex items-stretch gap-3 px-5 py-3">
-                  <div className="tabular w-14 shrink-0 pt-1 text-[11px] font-bold text-muted-foreground">
-                    {label}
+                  <div className="tabular w-16 shrink-0 pt-1 text-[11px] font-bold text-muted-foreground">
+                    {label12}
                   </div>
                   {b ? (
                     <Link
@@ -175,7 +190,7 @@ function CalendarPage() {
                           b.status === "training" ? "text-white/60" : "text-muted-foreground",
                         )}
                       >
-                        {b.start} — {b.end}
+                        {formatTime12(b.start)} — {formatTime12(b.end)}
                         {b.price > 0 && <> • {b.price} ر.س</>}
                       </p>
                     </Link>
