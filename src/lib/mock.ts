@@ -15,6 +15,7 @@ export type Court = {
   image: string;
   pricePerHour: number;
   surface: string;
+  imageKey: string;
 };
 
 export type BookingStatus =
@@ -29,13 +30,22 @@ export type Booking = {
   courtId: string;
   customer: string;
   phone: string;
-  start: string; // "HH:MM"
-  end: string;   // "HH:MM"
+  start: string; // "HH:MM" 24h
+  end: string;   // "HH:MM" 24h
   startAt: string; // ISO
   endAt: string;   // ISO
   status: BookingStatus;
   price: number;
   notes: string;
+  recurrenceGroupId: string | null;
+};
+
+export type Customer = {
+  id: string;
+  name: string;
+  phone: string;
+  notes: string;
+  createdAt: string;
 };
 
 export const SPORT_IMAGES: Record<string, string> = {
@@ -44,6 +54,13 @@ export const SPORT_IMAGES: Record<string, string> = {
   tennis: courtTennis,
   basket: courtBasket,
 };
+
+export const SPORT_OPTIONS: { value: Sport; label: string; imageKey: string }[] = [
+  { value: "padel", label: "بادل", imageKey: "padel" },
+  { value: "football", label: "قدم", imageKey: "football" },
+  { value: "tennis", label: "تنس", imageKey: "tennis" },
+  { value: "basket", label: "سلة", imageKey: "basket" },
+];
 
 export const HOURS = Array.from({ length: 14 }, (_, i) => 9 + i); // 09..22
 
@@ -92,14 +109,14 @@ export function formatDate(
   return out.join("، ");
 }
 
-export function todayLabel() {
-  return formatDate(new Date(), { weekday: "long", day: true, month: true });
-}
-
-export function greeting() {
-  const h = new Date().getHours();
+export function greeting(now: Date = new Date()) {
+  const h = now.getHours();
   if (h < 12) return "صباح الخير";
   return "مساء الخير";
+}
+
+export function todayLabel(now: Date = new Date()) {
+  return formatDate(now, { weekday: "long", day: true, month: true });
 }
 
 export function toHour(t: string) {
@@ -107,10 +124,23 @@ export function toHour(t: string) {
   return h + m / 60;
 }
 
-/** Extract HH:MM (local time) from ISO timestamp. */
+/** Extract HH:MM (local time, 24h) from ISO timestamp. */
 export function hhmm(iso: string) {
   const d = new Date(iso);
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+/** Convert "HH:MM" 24h to 12h Arabic label e.g. "٧:٠٠ ص" / "١٠:٣٠ م". */
+export function formatTime12(hhmmStr: string) {
+  const [hRaw, mRaw] = hhmmStr.split(":").map(Number);
+  const isAm = hRaw < 12;
+  const h12 = hRaw % 12 === 0 ? 12 : hRaw % 12;
+  const suffix = isAm ? "ص" : "م";
+  return `${toArabicDigits(h12)}:${toArabicDigits(String(mRaw).padStart(2, "0"))} ${suffix}`;
+}
+
+export function formatTimeRange12(startHHMM: string, endHHMM: string) {
+  return `${formatTime12(startHHMM)} — ${formatTime12(endHHMM)}`;
 }
 
 /** Duration in minutes between two ISO timestamps. */

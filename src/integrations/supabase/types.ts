@@ -24,6 +24,7 @@ export type Database = {
           id: string
           notes: string
           price: number
+          recurrence_group_id: string | null
           start_at: string
           status: Database["public"]["Enums"]["booking_status"]
           updated_at: string
@@ -37,6 +38,7 @@ export type Database = {
           id?: string
           notes?: string
           price?: number
+          recurrence_group_id?: string | null
           start_at: string
           status?: Database["public"]["Enums"]["booking_status"]
           updated_at?: string
@@ -50,6 +52,7 @@ export type Database = {
           id?: string
           notes?: string
           price?: number
+          recurrence_group_id?: string | null
           start_at?: string
           status?: Database["public"]["Enums"]["booking_status"]
           updated_at?: string
@@ -94,6 +97,33 @@ export type Database = {
           sport?: string
           sport_label?: string
           surface?: string
+        }
+        Relationships: []
+      }
+      customers: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          notes: string
+          phone: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string
+          phone?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string
+          phone?: string
+          updated_at?: string
         }
         Relationships: []
       }

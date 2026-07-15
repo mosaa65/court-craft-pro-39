@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
-import { Phone, ChevronLeft } from "lucide-react";
+import { Phone, ChevronLeft, Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { statusMeta, toArabicDigits, type Booking, type Court } from "@/lib/mock";
+import { statusMeta, toArabicDigits, formatTime12, type Booking, type Court } from "@/lib/mock";
 
 export function BookingCard({
   booking,
@@ -24,9 +24,9 @@ export function BookingCard({
       params={{ id: booking.id }}
       className="card-elev group flex items-center gap-3 p-4 transition active:scale-[0.99]"
     >
-      <div className="tabular grid w-16 shrink-0 text-center font-bold">
-        <span className="text-sm">{booking.start}</span>
-        <span className="text-[10px] font-medium text-muted-foreground">— {booking.end}</span>
+      <div className="grid w-20 shrink-0 text-center">
+        <span className="tabular text-[11px] font-bold">{formatTime12(booking.start)}</span>
+        <span className="tabular text-[10px] font-medium text-muted-foreground">— {formatTime12(booking.end)}</span>
         {dateLabel && (
           <span className="mt-0.5 text-[10px] font-semibold text-primary">{dateLabel}</span>
         )}
@@ -43,7 +43,17 @@ export function BookingCard({
         )}
       />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-bold">{booking.customer}</p>
+        <div className="flex items-center gap-1.5">
+          <p className="truncate text-sm font-bold">{booking.customer}</p>
+          {booking.recurrenceGroupId && (
+            <span
+              title="حجز أسبوعي"
+              className="grid size-4 shrink-0 place-items-center rounded-full bg-primary/15 text-primary"
+            >
+              <Repeat className="size-2.5" strokeWidth={2.5} />
+            </span>
+          )}
+        </div>
         <p className="truncate text-[11px] text-muted-foreground">{court?.name ?? booking.courtId}</p>
         {booking.phone && (
           <p className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground" dir="ltr">

@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { ArrowUpLeft, TrendingUp, Bell, ChevronLeft } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { greeting, todayLabel, statusMeta } from "@/lib/mock";
+import { greeting, todayLabel, statusMeta, formatTime12 } from "@/lib/mock";
 import { bookingsQuery, courtsQuery, localDateKey } from "@/lib/bookings.queries";
 import { BookingSkeletonList } from "@/components/booking-skeleton";
 
@@ -32,6 +33,14 @@ function Dashboard() {
   const { data: allBookings } = useSuspenseQuery(bookingsQuery({ date: localDateKey() }));
   const bookings = allBookings.filter((b) => b.status !== "cancelled");
 
+  // Hydration-safe "now": null on server & first render, then set on client
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    setNow(new Date());
+    const t = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+
   const totalRevenue = bookings.reduce((s, b) => s + b.price, 0);
   const confirmed = bookings.filter((b) => b.status === "confirmed").length;
   const occupancy = courts.length
@@ -45,9 +54,11 @@ function Dashboard() {
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-stone-line/70 bg-background/85 px-6 pb-4 pt-8 backdrop-blur-md">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-            {greeting()}
+            {now ? greeting(now) : "أهلًا"}
           </p>
-          <h1 className="mt-1 text-xl font-bold tracking-tight">{todayLabel()}</h1>
+          <h1 className="mt-1 text-xl font-bold tracking-tight">
+            {now ? todayLabel(now) : ""}
+          </h1>
         </div>
         <button
           aria-label="التنبيهات"
@@ -60,58 +71,38 @@ function Dashboard() {
 
       <main className="space-y-8 px-5 pt-6">
         <section className="grid grid-cols-2 gap-3 animate-rise">
-          <KpiCard
-            label="إيراد اليوم"
-            value={totalRevenue.toLocaleString("ar-SA")}
-            unit="ر.س"
-            trend={`${bookings.length} حجز`}
-          />
-          <KpiInkCard
-            label="حجوزات اليوم"
-            value={String(bookings.length)}
-            hint={`${confirmed} مؤكدة`}
-          />
-          <KpiCard
-            label="نسبة الإشغال"
-            value={`${occupancy}`}
-            unit="٪"
-            trend={`${Math.max(0, courts.length * 14 - bookings.length)} فترة متاحة`}
-          />
-          <KpiCard
-            label="الملاعب النشطة"
-            value={String(courts.length)}
-            unit=""
-            trend="جميع الفروع"
-          />
+          <KpiCard label="إيراد اليوم" value={totalRevenue.toLocaleString("ar-SA")} unit="ر.س" trend={`${bookings.length} حجز`} />
+          <KpiInkCard label="حجوزات اليوم" value={String(bookings.length)} hint={`${confirmed} مؤكدة`} />
+          <KpiCard label="نسبة الإشغال" value={`${occupancy}`} unit="٪" trend={`${Math.max(0, courts.length * 14 - bookings.length)} فترة متاحة`} />
+          <KpiCard label="الملاعب النشطة" value={String(courts.length)} unit="" trend="جميع الفروع" />
         </section>
 
         <section className="animate-rise" style={{ animationDelay: "60ms" }}>
           <SectionHead
             title="حالة الملاعب مباشرة"
-            action={<Link to="/courts" className="text-sm font-semibold text-primary">عرض الكل</Link>}
+            action={<Link to="/manage" className="text-sm font-semibold text-primary">عرض الكل</Link>}
           />
           <div className="no-scrollbar -mx-5 flex gap-3 overflow-x-auto px-5 pb-2">
             {courts.map((c) => {
-              const active = bookings.find((b) => b.courtId === c.id && b.status === "confirmed");
+              // Pick "next" occupier without time-of-day mismatch: first confirmed booking of the day
+              const next = bookings.find((b) => b.courtId === c.id && b.status === "confirmed") ?? null;
               return (
-                <article key={c.id} className="card-elev min-w-[270px] overflow-hidden">
+                <Link
+                  to="/courts/$id"
+                  params={{ id: c.id }}
+                  key={c.id}
+                  className="card-elev min-w-[270px] overflow-hidden transition active:scale-[0.99]"
+                >
                   <div className="relative">
-                    <img
-                      src={c.image}
-                      alt={c.name}
-                      loading="lazy"
-                      width={1200}
-                      height={750}
-                      className="aspect-[16/10] w-full object-cover"
-                    />
+                    <img src={c.image} alt={c.name} loading="lazy" width={1200} height={750} className="aspect-[16/10] w-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-ink/60 via-ink/0 to-transparent" />
                     <span
                       className={
                         "absolute right-3 top-3 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider " +
-                        (active ? "bg-primary text-primary-foreground" : "bg-white/85 text-ink")
+                        (next ? "bg-primary text-primary-foreground" : "bg-white/85 text-ink")
                       }
                     >
-                      {active ? "مشغول" : "متاح الآن"}
+                      {next ? "مشغول" : "متاح الآن"}
                     </span>
                     <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-bold text-ink backdrop-blur-md">
                       <span className="tabular">{c.pricePerHour}</span>
@@ -122,19 +113,14 @@ function Dashboard() {
                     <div className="min-w-0">
                       <h3 className="truncate text-sm font-bold">{c.name}</h3>
                       <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                        {active ? `التالي: ${active.start} — ${active.customer}` : "لا حجوزات قريبة"}
+                        {next ? `التالي: ${formatTime12(next.start)} — ${next.customer}` : "لا حجوزات قريبة"}
                       </p>
                     </div>
                     <div className="grid size-8 shrink-0 place-items-center rounded-xl bg-muted">
-                      <span
-                        className={
-                          "size-1.5 rounded-full " +
-                          (active ? "animate-pulse bg-primary" : "bg-muted-foreground/40")
-                        }
-                      />
+                      <span className={"size-1.5 rounded-full " + (next ? "animate-pulse bg-primary" : "bg-muted-foreground/40")} />
                     </div>
                   </div>
-                </article>
+                </Link>
               );
             })}
           </div>
@@ -151,9 +137,7 @@ function Dashboard() {
           />
 
           {recent.length === 0 ? (
-            <div className="card-elev p-8 text-center text-sm text-muted-foreground">
-              لا توجد حجوزات بعد لليوم.
-            </div>
+            <div className="card-elev p-8 text-center text-sm text-muted-foreground">لا توجد حجوزات بعد لليوم.</div>
           ) : (
             <div className="card-elev overflow-hidden">
               <ol className="divide-y divide-stone-line/70">
@@ -162,35 +146,26 @@ function Dashboard() {
                   const meta = statusMeta(b.status);
                   return (
                     <li key={b.id} className="animate-rise" style={{ animationDelay: `${140 + i * 40}ms` }}>
-                      <Link
-                        to="/bookings/$id"
-                        params={{ id: b.id }}
-                        className="flex items-center gap-3 p-4 transition hover:bg-muted/40"
-                      >
-                        <div className="tabular grid w-14 shrink-0 text-center font-bold">
-                          <span className="text-sm">{b.start}</span>
-                          <span className="text-[10px] font-medium text-muted-foreground">— {b.end}</span>
+                      <Link to="/bookings/$id" params={{ id: b.id }} className="flex items-center gap-3 p-4 transition hover:bg-muted/40">
+                        <div className="grid w-20 shrink-0 text-center font-bold">
+                          <span className="tabular text-[11px]">{formatTime12(b.start)}</span>
+                          <span className="tabular text-[10px] font-medium text-muted-foreground">— {formatTime12(b.end)}</span>
                         </div>
                         <span
                           aria-hidden
                           className={
                             "h-10 w-1 shrink-0 rounded-full " +
-                            (b.status === "confirmed"
-                              ? "bg-primary"
-                              : b.status === "training"
-                                ? "bg-ink"
-                                : b.status === "pending"
-                                  ? "bg-[color:var(--color-warn)]"
-                                  : "bg-muted-foreground/40")
+                            (b.status === "confirmed" ? "bg-primary"
+                              : b.status === "training" ? "bg-ink"
+                              : b.status === "pending" ? "bg-[color:var(--color-warn)]"
+                              : "bg-muted-foreground/40")
                           }
                         />
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-bold">{b.customer}</p>
                           <p className="truncate text-xs text-muted-foreground">{c?.name ?? b.courtId}</p>
                         </div>
-                        <span className={"rounded-full px-2 py-1 text-[10px] font-bold " + meta.tone}>
-                          {meta.label}
-                        </span>
+                        <span className={"rounded-full px-2 py-1 text-[10px] font-bold " + meta.tone}>{meta.label}</span>
                       </Link>
                     </li>
                   );
@@ -202,9 +177,7 @@ function Dashboard() {
 
         <section className="ink-card flex items-center justify-between p-5 animate-rise" style={{ animationDelay: "180ms" }}>
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/50">
-              أداء الأسبوع
-            </p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/50">أداء الأسبوع</p>
             <p className="mt-2 text-2xl font-bold tabular">
               {(totalRevenue * 6.4).toLocaleString("ar-SA")}{" "}
               <span className="text-xs font-medium text-white/60">ر.س</span>
@@ -213,10 +186,7 @@ function Dashboard() {
               <TrendingUp className="size-3.5" /> نمو ٢٢٪ خلال ٧ أيام
             </p>
           </div>
-          <Link
-            to="/calendar"
-            className="flex items-center gap-1 rounded-full bg-white/10 px-3.5 py-2 text-xs font-bold text-white backdrop-blur transition hover:bg-white/15"
-          >
+          <Link to="/calendar" className="flex items-center gap-1 rounded-full bg-white/10 px-3.5 py-2 text-xs font-bold text-white backdrop-blur transition hover:bg-white/15">
             التقويم
             <ArrowUpLeft className="size-3.5" />
           </Link>

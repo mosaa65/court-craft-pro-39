@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import { listBookingsFn, listCourtsFn, getBookingFn } from "./bookings.functions";
+import { listBookingsFn, listCourtsFn, getBookingFn, getCourtFn } from "./bookings.functions";
 import type { Booking, BookingStatus, Court } from "./mock";
 import { SPORT_IMAGES } from "./mock";
 
@@ -23,6 +23,7 @@ export type BookingRow = {
   status: BookingStatus;
   price: number;
   notes: string;
+  recurrence_group_id: string | null;
 };
 
 export function mapCourt(row: CourtRow): Court {
@@ -33,6 +34,7 @@ export function mapCourt(row: CourtRow): Court {
     sportLabel: row.sport_label,
     surface: row.surface,
     pricePerHour: Number(row.price_per_hour),
+    imageKey: row.image_key,
     image: SPORT_IMAGES[row.image_key] ?? SPORT_IMAGES.padel,
   };
 }
@@ -54,6 +56,7 @@ export function mapBooking(row: BookingRow): Booking {
     status: row.status,
     price: Number(row.price),
     notes: row.notes ?? "",
+    recurrenceGroupId: row.recurrence_group_id ?? null,
   };
 }
 
@@ -70,12 +73,21 @@ export const courtsQuery = queryOptions({
   staleTime: 5 * 60_000,
 });
 
+export function courtQuery(id: string) {
+  return queryOptions({
+    queryKey: ["court", id],
+    queryFn: async () => mapCourt((await getCourtFn({ data: { id } })) as CourtRow),
+    staleTime: 60_000,
+  });
+}
+
 export type BookingsFilter = {
   date?: string;
   courtId?: string;
   status?: string;
   search?: string;
   duration?: "all" | "short" | "hour" | "long";
+  phone?: string;
 };
 
 export function bookingsQuery(filter: BookingsFilter = {}) {
