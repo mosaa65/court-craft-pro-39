@@ -1,11 +1,11 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, CalendarDays, LayoutGrid, Plus, ListChecks, MoreHorizontal } from "lucide-react";
+import { Home, CalendarDays, LayoutGrid, Plus, ListChecks } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { BookingSheet } from "./booking-sheet";
 import { cn } from "@/lib/utils";
 
 type Tab = {
-  to: "/" | "/calendar" | "/bookings" | "/manage" | "/more";
+  to: "/" | "/calendar" | "/bookings" | "/manage";
   label: string;
   icon: typeof Home;
   exact?: boolean;
@@ -16,8 +16,7 @@ const tabs: Tab[] = [
   { to: "/", label: "الرئيسية", icon: Home, exact: true },
   { to: "/calendar", label: "التقويم", icon: CalendarDays },
   { to: "/bookings", label: "الحجوزات", icon: ListChecks },
-  { to: "/manage", label: "الإدارة", icon: LayoutGrid, matchPrefixes: ["/manage", "/courts", "/customers"] },
-  { to: "/more", label: "المزيد", icon: MoreHorizontal },
+  { to: "/manage", label: "الإدارة", icon: LayoutGrid, matchPrefixes: ["/manage", "/courts", "/customers", "/finance", "/more"] },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
