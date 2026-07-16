@@ -29,6 +29,7 @@ const CourtUpsertInput = z.object({
   surface: z.string().default(""),
   pricePerHour: z.number().nonnegative().default(0),
   imageKey: z.string().min(1),
+  imageUrl: z.string().url().nullable().optional(),
 });
 
 export const createCourtFn = createServerFn({ method: "POST" })
@@ -45,6 +46,7 @@ export const createCourtFn = createServerFn({ method: "POST" })
         surface: data.surface,
         price_per_hour: data.pricePerHour,
         image_key: data.imageKey,
+        image_url: data.imageUrl ?? null,
       })
       .select("*")
       .single();
@@ -65,6 +67,7 @@ export const updateCourtFn = createServerFn({ method: "POST" })
         surface: data.surface,
         price_per_hour: data.pricePerHour,
         image_key: data.imageKey,
+        image_url: data.imageUrl ?? null,
       })
       .eq("id", data.id)
       .select("*")
