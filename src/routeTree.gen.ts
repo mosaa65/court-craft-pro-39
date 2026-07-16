@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as MoreRouteImport } from './routes/more'
 import { Route as ManageRouteImport } from './routes/manage'
+import { Route as FinanceRouteImport } from './routes/finance'
 import { Route as CustomersRouteImport } from './routes/customers'
 import { Route as CourtsRouteImport } from './routes/courts'
 import { Route as CalendarRouteImport } from './routes/calendar'
@@ -28,6 +29,11 @@ const MoreRoute = MoreRouteImport.update({
 const ManageRoute = ManageRouteImport.update({
   id: '/manage',
   path: '/manage',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FinanceRoute = FinanceRouteImport.update({
+  id: '/finance',
+  path: '/finance',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CustomersRoute = CustomersRouteImport.update({
@@ -77,6 +83,7 @@ export interface FileRoutesByFullPath {
   '/calendar': typeof CalendarRoute
   '/courts': typeof CourtsRouteWithChildren
   '/customers': typeof CustomersRouteWithChildren
+  '/finance': typeof FinanceRoute
   '/manage': typeof ManageRoute
   '/more': typeof MoreRoute
   '/bookings/$id': typeof BookingsIdRoute
@@ -89,6 +96,7 @@ export interface FileRoutesByTo {
   '/calendar': typeof CalendarRoute
   '/courts': typeof CourtsRouteWithChildren
   '/customers': typeof CustomersRouteWithChildren
+  '/finance': typeof FinanceRoute
   '/manage': typeof ManageRoute
   '/more': typeof MoreRoute
   '/bookings/$id': typeof BookingsIdRoute
@@ -102,6 +110,7 @@ export interface FileRoutesById {
   '/calendar': typeof CalendarRoute
   '/courts': typeof CourtsRouteWithChildren
   '/customers': typeof CustomersRouteWithChildren
+  '/finance': typeof FinanceRoute
   '/manage': typeof ManageRoute
   '/more': typeof MoreRoute
   '/bookings/$id': typeof BookingsIdRoute
@@ -116,6 +125,7 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/courts'
     | '/customers'
+    | '/finance'
     | '/manage'
     | '/more'
     | '/bookings/$id'
@@ -128,6 +138,7 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/courts'
     | '/customers'
+    | '/finance'
     | '/manage'
     | '/more'
     | '/bookings/$id'
@@ -140,6 +151,7 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/courts'
     | '/customers'
+    | '/finance'
     | '/manage'
     | '/more'
     | '/bookings/$id'
@@ -153,6 +165,7 @@ export interface RootRouteChildren {
   CalendarRoute: typeof CalendarRoute
   CourtsRoute: typeof CourtsRouteWithChildren
   CustomersRoute: typeof CustomersRouteWithChildren
+  FinanceRoute: typeof FinanceRoute
   ManageRoute: typeof ManageRoute
   MoreRoute: typeof MoreRoute
 }
@@ -171,6 +184,13 @@ declare module '@tanstack/react-router' {
       path: '/manage'
       fullPath: '/manage'
       preLoaderRoute: typeof ManageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/finance': {
+      id: '/finance'
+      path: '/finance'
+      fullPath: '/finance'
+      preLoaderRoute: typeof FinanceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/customers': {
@@ -273,6 +293,7 @@ const rootRouteChildren: RootRouteChildren = {
   CalendarRoute: CalendarRoute,
   CourtsRoute: CourtsRouteWithChildren,
   CustomersRoute: CustomersRouteWithChildren,
+  FinanceRoute: FinanceRoute,
   ManageRoute: ManageRoute,
   MoreRoute: MoreRoute,
 }
