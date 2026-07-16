@@ -72,6 +72,7 @@ export type Database = {
           created_at: string
           id: string
           image_key: string
+          image_url: string | null
           name: string
           price_per_hour: number
           sport: string
@@ -82,6 +83,7 @@ export type Database = {
           created_at?: string
           id: string
           image_key: string
+          image_url?: string | null
           name: string
           price_per_hour?: number
           sport: string
@@ -92,6 +94,7 @@ export type Database = {
           created_at?: string
           id?: string
           image_key?: string
+          image_url?: string | null
           name?: string
           price_per_hour?: number
           sport?: string

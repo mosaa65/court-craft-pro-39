@@ -11,6 +11,7 @@ export type CourtRow = {
   surface: string;
   price_per_hour: number;
   image_key: string;
+  image_url?: string | null;
 };
 
 export type BookingRow = {
@@ -27,6 +28,7 @@ export type BookingRow = {
 };
 
 export function mapCourt(row: CourtRow): Court {
+  const imageUrl = row.image_url ?? null;
   return {
     id: row.id,
     name: row.name,
@@ -35,7 +37,8 @@ export function mapCourt(row: CourtRow): Court {
     surface: row.surface,
     pricePerHour: Number(row.price_per_hour),
     imageKey: row.image_key,
-    image: SPORT_IMAGES[row.image_key] ?? SPORT_IMAGES.padel,
+    imageUrl,
+    image: imageUrl || SPORT_IMAGES[row.image_key] || SPORT_IMAGES.padel,
   };
 }
 

@@ -1,11 +1,14 @@
-import { useEffect, useState } from "react";
-import { X, Loader2, AlertCircle, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { X, Loader2, AlertCircle, Trash2, Upload, ImageIcon } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { createCourtFn, updateCourtFn, deleteCourtFn } from "@/lib/bookings.functions";
 import { SPORT_OPTIONS, type Court, SPORT_IMAGES } from "@/lib/mock";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+
+const TEN_YEARS = 60 * 60 * 24 * 365 * 10;
 
 export function CourtFormSheet({
   open,
@@ -22,6 +25,9 @@ export function CourtFormSheet({
   const [sport, setSport] = useState<Court["sport"]>("padel");
   const [surface, setSurface] = useState("");
   const [pricePerHour, setPricePerHour] = useState<number>(80);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -31,12 +37,14 @@ export function CourtFormSheet({
       setSport(editing.sport);
       setSurface(editing.surface);
       setPricePerHour(editing.pricePerHour);
+      setImageUrl(editing.imageUrl);
     } else {
       setId("");
       setName("");
       setSport("padel");
       setSurface("");
       setPricePerHour(80);
+      setImageUrl(null);
     }
   }, [open, editing]);
 
@@ -46,6 +54,39 @@ export function CourtFormSheet({
   const deleteFn = useServerFn(deleteCourtFn);
 
   const sportOpt = SPORT_OPTIONS.find((s) => s.value === sport)!;
+
+  const previewSrc = imageUrl || SPORT_IMAGES[sportOpt.imageKey];
+
+  async function handleFile(file: File) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("الرجاء اختيار صورة");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("الحد الأقصى ٥ ميجابايت");
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("court-images")
+        .upload(path, file, { cacheControl: "31536000", upsert: false, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data: signed, error: sErr } = await supabase.storage
+        .from("court-images")
+        .createSignedUrl(path, TEN_YEARS);
+      if (sErr || !signed?.signedUrl) throw sErr ?? new Error("تعذّر توليد الرابط");
+      setImageUrl(signed.signedUrl);
+      toast.success("تم رفع الصورة");
+    } catch (e) {
+      toast.error((e as Error).message || "فشل رفع الصورة");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -57,6 +98,7 @@ export function CourtFormSheet({
         surface: surface.trim(),
         pricePerHour,
         imageKey: sportOpt.imageKey,
+        imageUrl,
       };
       if (mode === "edit") return await updateFn({ data: payload });
       return await createFn({ data: payload });
@@ -84,7 +126,7 @@ export function CourtFormSheet({
   });
 
   if (!open) return null;
-  const canSave = name.trim().length >= 2 && pricePerHour >= 0;
+  const canSave = name.trim().length >= 2 && pricePerHour >= 0 && !uploading;
 
   return (
     <div className="fixed inset-0 z-[70]" dir="rtl">
@@ -107,9 +149,46 @@ export function CourtFormSheet({
           </button>
         </div>
 
-        <div className="mb-5 aspect-[16/9] w-full overflow-hidden rounded-2xl border border-stone-line">
-          <img src={SPORT_IMAGES[sportOpt.imageKey]} alt={sportOpt.label} className="h-full w-full object-cover" />
+        <div className="relative mb-3 aspect-[16/9] w-full overflow-hidden rounded-2xl border border-stone-line bg-muted">
+          <img src={previewSrc} alt={sportOpt.label} className="h-full w-full object-cover" />
+          {uploading && (
+            <div className="absolute inset-0 grid place-items-center bg-ink/50 text-white">
+              <Loader2 className="size-6 animate-spin" />
+            </div>
+          )}
+          <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-ink/70 to-transparent p-2">
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              className="flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5 text-[11px] font-bold text-ink shadow-md active:scale-95"
+            >
+              <Upload className="size-3.5" />
+              {imageUrl ? "استبدال الصورة" : "رفع صورة"}
+            </button>
+            {imageUrl && (
+              <button
+                type="button"
+                onClick={() => setImageUrl(null)}
+                className="flex items-center gap-1 rounded-full bg-white/90 px-3 py-1.5 text-[11px] font-bold text-ink shadow-md active:scale-95"
+              >
+                <ImageIcon className="size-3.5" />
+                استخدام الصورة الافتراضية
+              </button>
+            )}
+          </div>
         </div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) handleFile(f);
+            e.target.value = "";
+          }}
+        />
 
         <div className="space-y-3">
           <input

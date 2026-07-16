@@ -13,6 +13,7 @@ export type Court = {
   sport: Sport;
   sportLabel: string;
   image: string;
+  imageUrl: string | null;
   pricePerHour: number;
   surface: string;
   imageKey: string;

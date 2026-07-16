@@ -1,21 +1,22 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutGrid, Users, Settings, ChevronLeft, Plus } from "lucide-react";
+import { LayoutGrid, Users, Settings, ChevronLeft, Plus, Wallet } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { courtsQuery } from "@/lib/bookings.queries";
+import { bookingsQuery, courtsQuery, localDateKey } from "@/lib/bookings.queries";
 import { customersQuery } from "@/lib/customers.queries";
 import { toArabicDigits } from "@/lib/mock";
 
 export const Route = createFileRoute("/manage")({
   head: () => ({
     meta: [
-      { title: "الإدارة — الملاعب والعملاء والإعدادات" },
-      { name: "description", content: "مركز الإدارة: الملاعب، العملاء، والإعدادات في مكان واحد." },
+      { title: "الإدارة — الملاعب والعملاء والمالية" },
+      { name: "description", content: "مركز الإدارة: الملاعب، العملاء، المالية، والإعدادات في مكان واحد." },
     ],
   }),
   loader: ({ context }) => {
     context.queryClient.ensureQueryData(courtsQuery);
+    context.queryClient.ensureQueryData(bookingsQuery({ date: localDateKey() }));
   },
   component: ManagePage,
 });
@@ -23,6 +24,10 @@ export const Route = createFileRoute("/manage")({
 function ManagePage() {
   const { data: courts } = useSuspenseQuery(courtsQuery);
   const { data: customers = [] } = useQuery(customersQuery(""));
+  const { data: todaysBookings = [] } = useQuery(bookingsQuery({ date: localDateKey() }));
+  const todayRevenue = todaysBookings
+    .filter((b) => b.status !== "cancelled" && b.status !== "maintenance" && b.status !== "pending")
+    .reduce((s, b) => s + b.price, 0);
 
   return (
     <AppShell>
@@ -53,10 +58,18 @@ function ManagePage() {
         />
 
         <HubCard
+          to="/finance"
+          icon={<Wallet className="size-6" />}
+          title="المالية والفواتير"
+          subtitle={`إيراد اليوم: ${toArabicDigits(todayRevenue)} ر.س`}
+          accent="primary"
+        />
+
+        <HubCard
           to="/more"
           icon={<Settings className="size-6" />}
           title="الإعدادات والمزيد"
-          subtitle="الفرع، الموظفون، الإشعارات، المدفوعات"
+          subtitle="الفرع، الموظفون، الإشعارات"
           accent="muted"
         />
       </main>
@@ -74,7 +87,7 @@ function HubCard({
   cta,
   ctaIcon,
 }: {
-  to: "/courts" | "/customers" | "/more";
+  to: "/courts" | "/customers" | "/more" | "/finance";
   icon: React.ReactNode;
   title: string;
   subtitle: string;
