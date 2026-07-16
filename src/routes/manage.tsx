@@ -87,7 +87,7 @@ function HubCard({
   cta,
   ctaIcon,
 }: {
-  to: "/courts" | "/customers" | "/more";
+  to: "/courts" | "/customers" | "/more" | "/finance";
   icon: React.ReactNode;
   title: string;
   subtitle: string;
