@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { ArrowUpLeft, TrendingUp, Bell, ChevronLeft } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { greeting, todayLabel, statusMeta, formatTime12 } from "@/lib/mock";
+import { greeting, todayLabel, statusMeta, formatTime12, toArabicDigits } from "@/lib/mock";
 import { bookingsQuery, courtsQuery, localDateKey } from "@/lib/bookings.queries";
+import { unreadCountQuery } from "@/lib/notifications.queries";
 import { BookingSkeletonList } from "@/components/booking-skeleton";
 
 export const Route = createFileRoute("/")({
