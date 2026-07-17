@@ -145,6 +145,10 @@ function BookingDetailPage() {
           </Link>
         )}
 
+        {booking.status !== "cancelled" && booking.status !== "maintenance" && (
+          <BookingPaymentCard booking={booking} />
+        )}
+
         <section className="card-elev p-5">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">العميل</p>
           <p className="mt-1 text-base font-bold">{booking.customer}</p>
