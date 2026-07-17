@@ -181,6 +181,15 @@ export const createBookingFn = createServerFn({ method: "POST" })
       .select("*")
       .single();
     if (error) throw new Error(error.message);
+
+    // Fire-and-notify: booking_created
+    const { data: court } = await sb.from("courts").select("name").eq("id", data.courtId).maybeSingle();
+    await sb.from("notifications").insert({
+      kind: "booking_created",
+      title: "حجز جديد",
+      body: `${row.customer_name} — ${court?.name ?? ""} • ${Number(row.price).toLocaleString("ar-SA")} ر.س`,
+      booking_id: row.id,
+    });
     return row;
   });
 
@@ -230,6 +239,13 @@ export const cancelBookingFn = createServerFn({ method: "POST" })
       .select("*")
       .single();
     if (error) throw new Error(error.message);
+
+    await sb.from("notifications").insert({
+      kind: "booking_cancelled",
+      title: "تم إلغاء الحجز",
+      body: `${row.customer_name} — ${new Date(row.start_at).toLocaleDateString("ar-SA")}`,
+      booking_id: row.id,
+    });
     return row;
   });
 

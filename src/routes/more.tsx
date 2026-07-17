@@ -15,8 +15,8 @@ export const Route = createFileRoute("/more")({
 const items = [
   { icon: Building2, label: "الفرع الحالي", hint: "فرع الياسمين" },
   { icon: Users, label: "الموظفون", hint: "٦ أعضاء" },
-  { icon: Wallet, label: "المدفوعات", hint: "قريباً" },
-  { icon: Bell, label: "الإشعارات", hint: "مفعّلة" },
+  { icon: Wallet, label: "المدفوعات", hint: "يدوي: نقدي / تحويل / بطاقة" },
+  { icon: Bell, label: "الإشعارات", hint: "مفعّلة (واتساب + SMS)" },
   { icon: Settings, label: "إعدادات النظام", hint: "" },
   { icon: HelpCircle, label: "الدعم والمساعدة", hint: "" },
 ];

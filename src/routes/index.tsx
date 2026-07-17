@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { ArrowUpLeft, TrendingUp, Bell, ChevronLeft } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { greeting, todayLabel, statusMeta, formatTime12 } from "@/lib/mock";
+import { greeting, todayLabel, statusMeta, formatTime12, toArabicDigits } from "@/lib/mock";
 import { bookingsQuery, courtsQuery, localDateKey } from "@/lib/bookings.queries";
+import { unreadCountQuery } from "@/lib/notifications.queries";
 import { BookingSkeletonList } from "@/components/booking-skeleton";
 
 export const Route = createFileRoute("/")({
@@ -31,6 +32,7 @@ export const Route = createFileRoute("/")({
 function Dashboard() {
   const { data: courts } = useSuspenseQuery(courtsQuery);
   const { data: allBookings } = useSuspenseQuery(bookingsQuery({ date: localDateKey() }));
+  const { data: unread = 0 } = useQuery(unreadCountQuery);
   const bookings = allBookings.filter((b) => b.status !== "cancelled");
 
   // Hydration-safe "now": null on server & first render, then set on client
@@ -60,13 +62,18 @@ function Dashboard() {
             {now ? todayLabel(now) : ""}
           </h1>
         </div>
-        <button
+        <Link
+          to="/notifications"
           aria-label="التنبيهات"
           className="relative grid size-11 place-items-center rounded-full border border-stone-line bg-card text-foreground"
         >
           <Bell className="size-[18px]" strokeWidth={1.8} />
-          <span className="absolute right-2.5 top-2.5 size-2 rounded-full bg-primary ring-2 ring-card" />
-        </button>
+          {unread > 0 && (
+            <span className="tabular absolute -right-1 -top-1 grid h-5 min-w-[20px] place-items-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground ring-2 ring-card">
+              {toArabicDigits(unread > 99 ? "99+" : unread)}
+            </span>
+          )}
+        </Link>
       </header>
 
       <main className="space-y-8 px-5 pt-6">

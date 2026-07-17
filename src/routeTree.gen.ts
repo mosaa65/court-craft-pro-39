@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as MoreRouteImport } from './routes/more'
 import { Route as ManageRouteImport } from './routes/manage'
 import { Route as FinanceRouteImport } from './routes/finance'
@@ -21,6 +22,11 @@ import { Route as CustomersIdRouteImport } from './routes/customers.$id'
 import { Route as CourtsIdRouteImport } from './routes/courts.$id'
 import { Route as BookingsIdRouteImport } from './routes/bookings.$id'
 
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MoreRoute = MoreRouteImport.update({
   id: '/more',
   path: '/more',
@@ -86,6 +92,7 @@ export interface FileRoutesByFullPath {
   '/finance': typeof FinanceRoute
   '/manage': typeof ManageRoute
   '/more': typeof MoreRoute
+  '/notifications': typeof NotificationsRoute
   '/bookings/$id': typeof BookingsIdRoute
   '/courts/$id': typeof CourtsIdRoute
   '/customers/$id': typeof CustomersIdRoute
@@ -99,6 +106,7 @@ export interface FileRoutesByTo {
   '/finance': typeof FinanceRoute
   '/manage': typeof ManageRoute
   '/more': typeof MoreRoute
+  '/notifications': typeof NotificationsRoute
   '/bookings/$id': typeof BookingsIdRoute
   '/courts/$id': typeof CourtsIdRoute
   '/customers/$id': typeof CustomersIdRoute
@@ -113,6 +121,7 @@ export interface FileRoutesById {
   '/finance': typeof FinanceRoute
   '/manage': typeof ManageRoute
   '/more': typeof MoreRoute
+  '/notifications': typeof NotificationsRoute
   '/bookings/$id': typeof BookingsIdRoute
   '/courts/$id': typeof CourtsIdRoute
   '/customers/$id': typeof CustomersIdRoute
@@ -128,6 +137,7 @@ export interface FileRouteTypes {
     | '/finance'
     | '/manage'
     | '/more'
+    | '/notifications'
     | '/bookings/$id'
     | '/courts/$id'
     | '/customers/$id'
@@ -141,6 +151,7 @@ export interface FileRouteTypes {
     | '/finance'
     | '/manage'
     | '/more'
+    | '/notifications'
     | '/bookings/$id'
     | '/courts/$id'
     | '/customers/$id'
@@ -154,6 +165,7 @@ export interface FileRouteTypes {
     | '/finance'
     | '/manage'
     | '/more'
+    | '/notifications'
     | '/bookings/$id'
     | '/courts/$id'
     | '/customers/$id'
@@ -168,10 +180,18 @@ export interface RootRouteChildren {
   FinanceRoute: typeof FinanceRoute
   ManageRoute: typeof ManageRoute
   MoreRoute: typeof MoreRoute
+  NotificationsRoute: typeof NotificationsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/more': {
       id: '/more'
       path: '/more'
@@ -296,6 +316,7 @@ const rootRouteChildren: RootRouteChildren = {
   FinanceRoute: FinanceRoute,
   ManageRoute: ManageRoute,
   MoreRoute: MoreRoute,
+  NotificationsRoute: NotificationsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
