@@ -22,7 +22,12 @@ export type Database = {
           customer_phone: string
           end_at: string
           id: string
+          invoice_channel: string | null
+          invoice_sent_at: string | null
           notes: string
+          paid_at: string | null
+          payment_method: string | null
+          payment_note: string
           price: number
           recurrence_group_id: string | null
           start_at: string
@@ -36,7 +41,12 @@ export type Database = {
           customer_phone?: string
           end_at: string
           id?: string
+          invoice_channel?: string | null
+          invoice_sent_at?: string | null
           notes?: string
+          paid_at?: string | null
+          payment_method?: string | null
+          payment_note?: string
           price?: number
           recurrence_group_id?: string | null
           start_at: string
@@ -50,7 +60,12 @@ export type Database = {
           customer_phone?: string
           end_at?: string
           id?: string
+          invoice_channel?: string | null
+          invoice_sent_at?: string | null
           notes?: string
+          paid_at?: string | null
+          payment_method?: string | null
+          payment_note?: string
           price?: number
           recurrence_group_id?: string | null
           start_at?: string
@@ -129,6 +144,44 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      notifications: {
+        Row: {
+          body: string
+          booking_id: string | null
+          created_at: string
+          id: string
+          kind: string
+          read: boolean
+          title: string
+        }
+        Insert: {
+          body?: string
+          booking_id?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          read?: boolean
+          title: string
+        }
+        Update: {
+          body?: string
+          booking_id?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          read?: boolean
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
