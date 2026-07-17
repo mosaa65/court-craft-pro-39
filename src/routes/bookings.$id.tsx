@@ -16,6 +16,7 @@ import {
 import { AppShell } from "@/components/app-shell";
 import { CancelBookingDialog } from "@/components/cancel-booking-dialog";
 import { BookingSheet } from "@/components/booking-sheet";
+import { BookingPaymentCard } from "@/components/booking-payment-card";
 import { bookingQuery, courtsQuery } from "@/lib/bookings.queries";
 import {
   formatDate,
