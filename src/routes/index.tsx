@@ -32,6 +32,7 @@ export const Route = createFileRoute("/")({
 function Dashboard() {
   const { data: courts } = useSuspenseQuery(courtsQuery);
   const { data: allBookings } = useSuspenseQuery(bookingsQuery({ date: localDateKey() }));
+  const { data: unread = 0 } = useQuery(unreadCountQuery);
   const bookings = allBookings.filter((b) => b.status !== "cancelled");
 
   // Hydration-safe "now": null on server & first render, then set on client
