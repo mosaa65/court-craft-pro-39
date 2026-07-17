@@ -129,6 +129,7 @@ export function BookingSheet({
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["bookings"] });
       qc.invalidateQueries({ queryKey: ["booking"] });
+      qc.invalidateQueries({ queryKey: ["notifications"] });
       toast.success(
         mode === "edit"
           ? "تم تحديث الحجز"

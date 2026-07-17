@@ -36,6 +36,7 @@ export function CancelBookingDialog({
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["bookings"] });
       qc.invalidateQueries({ queryKey: ["booking", bookingId] });
+      qc.invalidateQueries({ queryKey: ["notifications"] });
       toast.success(scope === "all" ? "تم إلغاء كل الحجوزات المتكررة" : "تم إلغاء الحجز");
       onOpenChange(false);
       onCancelled?.();
