@@ -239,6 +239,13 @@ export const cancelBookingFn = createServerFn({ method: "POST" })
       .select("*")
       .single();
     if (error) throw new Error(error.message);
+
+    await sb.from("notifications").insert({
+      kind: "booking_cancelled",
+      title: "تم إلغاء الحجز",
+      body: `${row.customer_name} — ${new Date(row.start_at).toLocaleDateString("ar-SA")}`,
+      booking_id: row.id,
+    });
     return row;
   });
 
