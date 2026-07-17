@@ -26,6 +26,8 @@ export type BookingStatus =
   | "maintenance"
   | "cancelled";
 
+export type PaymentMethod = "cash" | "transfer" | "card" | "other";
+
 export type Booking = {
   id: string;
   courtId: string;
@@ -39,7 +41,22 @@ export type Booking = {
   price: number;
   notes: string;
   recurrenceGroupId: string | null;
+  paidAt: string | null;
+  paymentMethod: PaymentMethod | null;
+  paymentNote: string;
+  invoiceSentAt: string | null;
+  invoiceChannel: "whatsapp" | "sms" | null;
 };
+
+export function paymentMethodLabel(m: PaymentMethod | null | undefined) {
+  switch (m) {
+    case "cash": return "نقداً";
+    case "transfer": return "تحويل بنكي";
+    case "card": return "بطاقة";
+    case "other": return "أخرى";
+    default: return "—";
+  }
+}
 
 export type Customer = {
   id: string;
