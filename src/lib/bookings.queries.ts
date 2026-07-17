@@ -25,6 +25,11 @@ export type BookingRow = {
   price: number;
   notes: string;
   recurrence_group_id: string | null;
+  paid_at: string | null;
+  payment_method: string | null;
+  payment_note: string;
+  invoice_sent_at: string | null;
+  invoice_channel: string | null;
 };
 
 export function mapCourt(row: CourtRow): Court {
@@ -60,6 +65,11 @@ export function mapBooking(row: BookingRow): Booking {
     price: Number(row.price),
     notes: row.notes ?? "",
     recurrenceGroupId: row.recurrence_group_id ?? null,
+    paidAt: row.paid_at ?? null,
+    paymentMethod: (row.payment_method as Booking["paymentMethod"]) ?? null,
+    paymentNote: row.payment_note ?? "",
+    invoiceSentAt: row.invoice_sent_at ?? null,
+    invoiceChannel: (row.invoice_channel as Booking["invoiceChannel"]) ?? null,
   };
 }
 
