@@ -126,7 +126,7 @@ export function BookingSheet({
       }
       return await createFn({ data: payload });
     },
-    onSuccess: () => {
+    onSuccess: (result: unknown) => {
       qc.invalidateQueries({ queryKey: ["bookings"] });
       qc.invalidateQueries({ queryKey: ["booking"] });
       qc.invalidateQueries({ queryKey: ["notifications"] });
@@ -137,6 +137,15 @@ export function BookingSheet({
             ? `تم إنشاء ${toArabicDigits(weeks)} حجز أسبوعي`
             : "تم تأكيد الحجز",
       );
+      // Surface messaging status if backend attempted to notify the customer.
+      const msg = (result as { __messaging?: { ok: boolean; channel?: string; error?: string } })?.__messaging;
+      if (msg) {
+        if (msg.ok) {
+          toast.success(msg.channel === "whatsapp" ? "تم إرسال تأكيد للعميل عبر واتساب" : "تم إرسال تأكيد للعميل عبر SMS");
+        } else if (msg.error) {
+          toast.error(`تعذّر إرسال التأكيد: ${msg.error}`);
+        }
+      }
       setConfirmed(true);
     },
     onError: (err: Error) => {

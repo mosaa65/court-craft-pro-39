@@ -190,7 +190,38 @@ export const createBookingFn = createServerFn({ method: "POST" })
       body: `${row.customer_name} — ${court?.name ?? ""} • ${Number(row.price).toLocaleString("ar-SA")} ر.س`,
       booking_id: row.id,
     });
-    return row;
+
+    // Auto-send confirmation to customer (best-effort). WhatsApp first, SMS fallback.
+    let messagingResult: { ok: boolean; channel?: string; error?: string } = { ok: false };
+    if (row.customer_phone) {
+      try {
+        const { sendTwilioAuto, renderBookingConfirmation } = await import("./twilio.server");
+        const body = renderBookingConfirmation({
+          customer: row.customer_name,
+          courtName: court?.name ?? "—",
+          startAt: row.start_at,
+          endAt: row.end_at,
+          price: Number(row.price),
+        });
+        const res = await sendTwilioAuto({ to: row.customer_phone, body });
+        messagingResult = res.ok
+          ? { ok: true, channel: res.channel }
+          : { ok: false, error: res.error };
+        if (res.ok) {
+          await sb.from("notifications").insert({
+            kind: "invoice_sent",
+            title: res.channel === "whatsapp" ? "تم إرسال تأكيد الحجز عبر واتساب" : "تم إرسال تأكيد الحجز عبر SMS",
+            body: `${row.customer_name} — ${row.customer_phone}`,
+            booking_id: row.id,
+          });
+        } else {
+          console.warn("[booking_created] auto-message failed:", res.error);
+        }
+      } catch (e) {
+        console.warn("[booking_created] auto-message error:", e);
+      }
+    }
+    return { ...row, __messaging: messagingResult };
   });
 
 export const updateBookingFn = createServerFn({ method: "POST" })
