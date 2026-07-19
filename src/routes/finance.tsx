@@ -1,10 +1,36 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { ArrowRight, TrendingUp, Coins, ReceiptText, Clock, CheckCircle2, XCircle, Download } from "lucide-react";
+import {
+  ArrowRight,
+  TrendingUp,
+  Coins,
+  ReceiptText,
+  Clock,
+  CheckCircle2,
+  Download,
+  X,
+  CalendarDays,
+  MapPin,
+  Phone,
+  User,
+  StickyNote,
+  ChevronLeft,
+} from "lucide-react";
 import { AppShell } from "@/components/app-shell";
+import { BookingPaymentCard } from "@/components/booking-payment-card";
 import { bookingsQuery, courtsQuery } from "@/lib/bookings.queries";
-import { toArabicDigits, formatDate, statusMeta, formatTime12 } from "@/lib/mock";
+import {
+  toArabicDigits,
+  formatDate,
+  statusMeta,
+  formatTime12,
+  formatDuration,
+  durationMinutes,
+  paymentMethodLabel,
+  type Booking,
+  type Court,
+} from "@/lib/mock";
 
 export const Route = createFileRoute("/finance")({
   head: () => ({
@@ -27,8 +53,13 @@ function FinancePage() {
   const { data: allBookings } = useSuspenseQuery(bookingsQuery({}));
   const [range, setRange] = useState<Range>("month");
   const [status, setStatus] = useState<"all" | "paid" | "pending">("all");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const courtsMap = useMemo(() => new Map(courts.map((c) => [c.id, c])), [courts]);
+  const selectedBooking = useMemo(
+    () => allBookings.find((b) => b.id === selectedId) ?? null,
+    [allBookings, selectedId],
+  );
 
   const filtered = useMemo(() => {
     const now = new Date();
@@ -43,16 +74,16 @@ function FinancePage() {
       .filter((b) => new Date(b.startAt) >= start)
       .filter((b) => {
         if (status === "all") return true;
-        if (status === "paid") return b.status === "confirmed" || b.status === "training";
-        return b.status === "pending";
+        if (status === "paid") return Boolean(b.paidAt);
+        return !b.paidAt;
       })
       .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime());
   }, [allBookings, range, status]);
 
-  const totalRevenue = filtered.filter((b) => b.status !== "pending").reduce((s, b) => s + b.price, 0);
-  const pendingRevenue = filtered.filter((b) => b.status === "pending").reduce((s, b) => s + b.price, 0);
-  const paidCount = filtered.filter((b) => b.status !== "pending").length;
-  const pendingCount = filtered.filter((b) => b.status === "pending").length;
+  const totalRevenue = filtered.filter((b) => b.paidAt).reduce((s, b) => s + b.price, 0);
+  const pendingRevenue = filtered.filter((b) => !b.paidAt).reduce((s, b) => s + b.price, 0);
+  const paidCount = filtered.filter((b) => b.paidAt).length;
+  const pendingCount = filtered.filter((b) => !b.paidAt).length;
 
   function exportCsv() {
     const header = ["رقم الفاتورة", "التاريخ", "الوقت", "العميل", "الملعب", "الحالة", "المبلغ"];
@@ -181,13 +212,13 @@ function FinancePage() {
           ) : (
             filtered.map((b) => {
               const court = courtsMap.get(b.courtId);
-              const paid = b.status !== "pending";
+              const paid = Boolean(b.paidAt);
               return (
-                <Link
+                <button
                   key={b.id}
-                  to="/bookings/$id"
-                  params={{ id: b.id }}
-                  className="card-elev flex items-center gap-3 p-3 transition active:scale-[0.99]"
+                  type="button"
+                  onClick={() => setSelectedId(b.id)}
+                  className="card-elev flex w-full items-center gap-3 p-3 text-right transition active:scale-[0.99]"
                 >
                   <div
                     className={
@@ -202,8 +233,8 @@ function FinancePage() {
                       <p className="tabular text-[10px] font-bold text-muted-foreground">
                         INV-{b.id.slice(0, 6).toUpperCase()}
                       </p>
-                      <span className={"rounded-full px-2 py-0.5 text-[9px] font-bold " + statusMeta(b.status).tone}>
-                        {statusMeta(b.status).label}
+                      <span className={"rounded-full px-2 py-0.5 text-[9px] font-bold " + (paid ? "bg-primary/10 text-primary" : "bg-[color:var(--color-warn)]/15 text-[color:oklch(0.55_0.15_70)]")}>
+                        {paid ? "مدفوعة" : "بانتظار الدفع"}
                       </span>
                     </div>
                     <p className="mt-0.5 truncate text-sm font-bold">{b.customer}</p>
@@ -214,14 +245,126 @@ function FinancePage() {
                   <div className="text-left">
                     <p className="tabular text-base font-bold">{toArabicDigits(b.price)}</p>
                     <p className="text-[9px] font-medium text-muted-foreground">ر.س</p>
+                    <p className="mt-1 text-[9px] font-bold text-primary">فتح</p>
                   </div>
-                </Link>
+                </button>
               );
             })
           )}
         </section>
       </main>
+
+      {selectedBooking && (
+        <InvoiceDrawer
+          booking={selectedBooking}
+          court={courtsMap.get(selectedBooking.courtId)}
+          onClose={() => setSelectedId(null)}
+        />
+      )}
     </AppShell>
+  );
+}
+
+function InvoiceDrawer({ booking, court, onClose }: { booking: Booking; court?: Court; onClose: () => void }) {
+  const paid = Boolean(booking.paidAt);
+  const startDate = new Date(booking.startAt);
+  const duration = durationMinutes(booking.startAt, booking.endAt);
+
+  return (
+    <div className="fixed inset-0 z-50" dir="rtl">
+      <button
+        type="button"
+        aria-label="إغلاق الفاتورة"
+        onClick={onClose}
+        className="absolute inset-0 bg-ink/45 backdrop-blur-[2px]"
+      />
+      <div className="absolute inset-x-0 bottom-0 mx-auto max-h-[92vh] max-w-[440px] overflow-y-auto rounded-t-[2rem] bg-background p-5 pb-28 shadow-[var(--shadow-elev-3)]">
+        <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-stone-line" />
+
+        <header className="flex items-start gap-3">
+          <div className="grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary">
+            <ReceiptText className="size-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">تفاصيل الفاتورة</p>
+            <h2 className="tabular mt-0.5 text-xl font-bold">INV-{booking.id.slice(0, 8).toUpperCase()}</h2>
+            <p className="mt-1 text-xs text-muted-foreground">{statusMeta(booking.status).label} · {paid ? "مدفوعة" : "بانتظار الدفع"}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="إغلاق"
+            className="grid size-10 place-items-center rounded-full bg-muted text-muted-foreground"
+          >
+            <X className="size-4" />
+          </button>
+        </header>
+
+        <section className="mt-5 rounded-[1.5rem] bg-ink p-5 text-primary-foreground">
+          <p className="text-xs text-primary-foreground/70">المبلغ المطلوب</p>
+          <div className="mt-1 flex items-end justify-between gap-3">
+            <p className="tabular text-4xl font-bold leading-none">{toArabicDigits(booking.price)}</p>
+            <span className="rounded-full bg-primary-foreground/10 px-3 py-1 text-[11px] font-bold">ر.س</span>
+          </div>
+          <div className="mt-4 flex items-center justify-between border-t border-primary-foreground/10 pt-3 text-xs">
+            <span>{paid ? `تم الدفع: ${paymentMethodLabel(booking.paymentMethod)}` : "لم يتم السداد بعد"}</span>
+            {booking.paidAt && <span>{new Date(booking.paidAt).toLocaleDateString("ar-SA")}</span>}
+          </div>
+        </section>
+
+        <section className="mt-4 grid grid-cols-2 gap-2">
+          <InvoiceInfo icon={<CalendarDays className="size-4" />} label="التاريخ" value={formatDate(startDate, { weekday: "long", day: true, month: true, year: true })} />
+          <InvoiceInfo icon={<Clock className="size-4" />} label="الوقت" value={`${formatTime12(booking.start)} — ${formatTime12(booking.end)}`} />
+          <InvoiceInfo icon={<MapPin className="size-4" />} label="الملعب" value={court?.name ?? booking.courtId} />
+          <InvoiceInfo icon={<Clock className="size-4" />} label="المدة" value={formatDuration(duration)} />
+          <InvoiceInfo icon={<User className="size-4" />} label="العميل" value={booking.customer} />
+          <InvoiceInfo icon={<Phone className="size-4" />} label="الجوال" value={booking.phone || "—"} ltr />
+        </section>
+
+        {booking.notes && (
+          <section className="mt-3 rounded-2xl bg-muted/60 p-4">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <StickyNote className="size-4" />
+              <p className="text-[10px] font-semibold uppercase tracking-widest">ملاحظات</p>
+            </div>
+            <p className="mt-2 text-sm leading-relaxed">{booking.notes}</p>
+          </section>
+        )}
+
+        <div className="mt-4">
+          <BookingPaymentCard booking={booking} />
+        </div>
+
+        <Link
+          to="/bookings/$id"
+          params={{ id: booking.id }}
+          className="mt-3 flex h-12 items-center justify-center gap-2 rounded-2xl border border-stone-line bg-card text-sm font-bold text-foreground transition active:scale-[0.99]"
+        >
+          فتح تفاصيل الحجز الكاملة
+          <ChevronLeft className="size-4" />
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function InvoiceInfo({
+  icon,
+  label,
+  value,
+  ltr,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  ltr?: boolean;
+}) {
+  return (
+    <div className="min-w-0 rounded-2xl bg-muted/60 p-3">
+      <div className="flex items-center gap-1.5 text-muted-foreground">{icon}</div>
+      <p className="mt-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</p>
+      <p className="mt-0.5 truncate text-xs font-bold" dir={ltr ? "ltr" : "rtl"}>{value}</p>
+    </div>
   );
 }
 
@@ -244,7 +387,6 @@ function Kpi({
   return (
     <div className="card-elev p-4">
       <div className={"grid size-8 place-items-center rounded-full " + accentClass}>{icon}</div>
-      <XCircle className="hidden" />
       <p className="mt-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</p>
       <p className="tabular mt-1 text-xl font-bold">
         {value}
