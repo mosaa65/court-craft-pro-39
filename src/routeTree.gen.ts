@@ -13,7 +13,10 @@ import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as MoreRouteImport } from './routes/more'
 import { Route as ManageRouteImport } from './routes/manage'
 import { Route as FinanceRouteImport } from './routes/finance'
+import { Route as CustomersRouteImport } from './routes/customers'
+import { Route as CourtsRouteImport } from './routes/courts'
 import { Route as CalendarRouteImport } from './routes/calendar'
+import { Route as BookingsRouteImport } from './routes/bookings'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CustomersIndexRouteImport } from './routes/customers.index'
 import { Route as CourtsIndexRouteImport } from './routes/courts.index'
@@ -42,9 +45,24 @@ const FinanceRoute = FinanceRouteImport.update({
   path: '/finance',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CustomersRoute = CustomersRouteImport.update({
+  id: '/customers',
+  path: '/customers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CourtsRoute = CourtsRouteImport.update({
+  id: '/courts',
+  path: '/courts',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CalendarRoute = CalendarRouteImport.update({
   id: '/calendar',
   path: '/calendar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BookingsRoute = BookingsRouteImport.update({
+  id: '/bookings',
+  path: '/bookings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -53,39 +71,42 @@ const IndexRoute = IndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const CustomersIndexRoute = CustomersIndexRouteImport.update({
-  id: '/customers/',
-  path: '/customers/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => CustomersRoute,
 } as any)
 const CourtsIndexRoute = CourtsIndexRouteImport.update({
-  id: '/courts/',
-  path: '/courts/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => CourtsRoute,
 } as any)
 const BookingsIndexRoute = BookingsIndexRouteImport.update({
-  id: '/bookings/',
-  path: '/bookings/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => BookingsRoute,
 } as any)
 const CustomersIdRoute = CustomersIdRouteImport.update({
-  id: '/customers/$id',
-  path: '/customers/$id',
-  getParentRoute: () => rootRouteImport,
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => CustomersRoute,
 } as any)
 const CourtsIdRoute = CourtsIdRouteImport.update({
-  id: '/courts/$id',
-  path: '/courts/$id',
-  getParentRoute: () => rootRouteImport,
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => CourtsRoute,
 } as any)
 const BookingsIdRoute = BookingsIdRouteImport.update({
-  id: '/bookings/$id',
-  path: '/bookings/$id',
-  getParentRoute: () => rootRouteImport,
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => BookingsRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/bookings': typeof BookingsRouteWithChildren
   '/calendar': typeof CalendarRoute
+  '/courts': typeof CourtsRouteWithChildren
+  '/customers': typeof CustomersRouteWithChildren
   '/finance': typeof FinanceRoute
   '/manage': typeof ManageRoute
   '/more': typeof MoreRoute
@@ -114,7 +135,10 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/bookings': typeof BookingsRouteWithChildren
   '/calendar': typeof CalendarRoute
+  '/courts': typeof CourtsRouteWithChildren
+  '/customers': typeof CustomersRouteWithChildren
   '/finance': typeof FinanceRoute
   '/manage': typeof ManageRoute
   '/more': typeof MoreRoute
@@ -130,7 +154,10 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/bookings'
     | '/calendar'
+    | '/courts'
+    | '/customers'
     | '/finance'
     | '/manage'
     | '/more'
@@ -158,7 +185,10 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/bookings'
     | '/calendar'
+    | '/courts'
+    | '/customers'
     | '/finance'
     | '/manage'
     | '/more'
@@ -173,17 +203,14 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BookingsRoute: typeof BookingsRouteWithChildren
   CalendarRoute: typeof CalendarRoute
+  CourtsRoute: typeof CourtsRouteWithChildren
+  CustomersRoute: typeof CustomersRouteWithChildren
   FinanceRoute: typeof FinanceRoute
   ManageRoute: typeof ManageRoute
   MoreRoute: typeof MoreRoute
   NotificationsRoute: typeof NotificationsRoute
-  BookingsIdRoute: typeof BookingsIdRoute
-  CourtsIdRoute: typeof CourtsIdRoute
-  CustomersIdRoute: typeof CustomersIdRoute
-  BookingsIndexRoute: typeof BookingsIndexRoute
-  CourtsIndexRoute: typeof CourtsIndexRoute
-  CustomersIndexRoute: typeof CustomersIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -216,11 +243,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FinanceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/customers': {
+      id: '/customers'
+      path: '/customers'
+      fullPath: '/customers'
+      preLoaderRoute: typeof CustomersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/courts': {
+      id: '/courts'
+      path: '/courts'
+      fullPath: '/courts'
+      preLoaderRoute: typeof CourtsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/calendar': {
       id: '/calendar'
       path: '/calendar'
       fullPath: '/calendar'
       preLoaderRoute: typeof CalendarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bookings': {
+      id: '/bookings'
+      path: '/bookings'
+      fullPath: '/bookings'
+      preLoaderRoute: typeof BookingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -232,62 +280,100 @@ declare module '@tanstack/react-router' {
     }
     '/customers/': {
       id: '/customers/'
-      path: '/customers'
+      path: '/'
       fullPath: '/customers/'
       preLoaderRoute: typeof CustomersIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof CustomersRoute
     }
     '/courts/': {
       id: '/courts/'
-      path: '/courts'
+      path: '/'
       fullPath: '/courts/'
       preLoaderRoute: typeof CourtsIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof CourtsRoute
     }
     '/bookings/': {
       id: '/bookings/'
-      path: '/bookings'
+      path: '/'
       fullPath: '/bookings/'
       preLoaderRoute: typeof BookingsIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof BookingsRoute
     }
     '/customers/$id': {
       id: '/customers/$id'
-      path: '/customers/$id'
+      path: '/$id'
       fullPath: '/customers/$id'
       preLoaderRoute: typeof CustomersIdRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof CustomersRoute
     }
     '/courts/$id': {
       id: '/courts/$id'
-      path: '/courts/$id'
+      path: '/$id'
       fullPath: '/courts/$id'
       preLoaderRoute: typeof CourtsIdRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof CourtsRoute
     }
     '/bookings/$id': {
       id: '/bookings/$id'
-      path: '/bookings/$id'
+      path: '/$id'
       fullPath: '/bookings/$id'
       preLoaderRoute: typeof BookingsIdRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof BookingsRoute
     }
   }
 }
 
+interface BookingsRouteChildren {
+  BookingsIdRoute: typeof BookingsIdRoute
+  BookingsIndexRoute: typeof BookingsIndexRoute
+}
+
+const BookingsRouteChildren: BookingsRouteChildren = {
+  BookingsIdRoute: BookingsIdRoute,
+  BookingsIndexRoute: BookingsIndexRoute,
+}
+
+const BookingsRouteWithChildren = BookingsRoute._addFileChildren(
+  BookingsRouteChildren,
+)
+
+interface CourtsRouteChildren {
+  CourtsIdRoute: typeof CourtsIdRoute
+  CourtsIndexRoute: typeof CourtsIndexRoute
+}
+
+const CourtsRouteChildren: CourtsRouteChildren = {
+  CourtsIdRoute: CourtsIdRoute,
+  CourtsIndexRoute: CourtsIndexRoute,
+}
+
+const CourtsRouteWithChildren =
+  CourtsRoute._addFileChildren(CourtsRouteChildren)
+
+interface CustomersRouteChildren {
+  CustomersIdRoute: typeof CustomersIdRoute
+  CustomersIndexRoute: typeof CustomersIndexRoute
+}
+
+const CustomersRouteChildren: CustomersRouteChildren = {
+  CustomersIdRoute: CustomersIdRoute,
+  CustomersIndexRoute: CustomersIndexRoute,
+}
+
+const CustomersRouteWithChildren = CustomersRoute._addFileChildren(
+  CustomersRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BookingsRoute: BookingsRouteWithChildren,
   CalendarRoute: CalendarRoute,
+  CourtsRoute: CourtsRouteWithChildren,
+  CustomersRoute: CustomersRouteWithChildren,
   FinanceRoute: FinanceRoute,
   ManageRoute: ManageRoute,
   MoreRoute: MoreRoute,
   NotificationsRoute: NotificationsRoute,
-  BookingsIdRoute: BookingsIdRoute,
-  CourtsIdRoute: CourtsIdRoute,
-  CustomersIdRoute: CustomersIdRoute,
-  BookingsIndexRoute: BookingsIndexRoute,
-  CourtsIndexRoute: CourtsIndexRoute,
-  CustomersIndexRoute: CustomersIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
