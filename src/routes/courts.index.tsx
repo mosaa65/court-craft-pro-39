@@ -6,7 +6,7 @@ import { AppShell } from "@/components/app-shell";
 import { CourtFormSheet } from "@/components/court-form-sheet";
 import { bookingsQuery, courtsQuery, localDateKey } from "@/lib/bookings.queries";
 
-export const Route = createFileRoute("/courts")({
+export const Route = createFileRoute("/courts/")({
   head: () => ({
     meta: [
       { title: "الملاعب — إدارة الملاعب الرياضية" },

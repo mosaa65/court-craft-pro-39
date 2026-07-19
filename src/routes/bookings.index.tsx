@@ -9,7 +9,7 @@ import { bookingsQuery, courtsQuery, localDateKey } from "@/lib/bookings.queries
 import { formatDate, toArabicDigits, type BookingStatus } from "@/lib/mock";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/bookings")({
+export const Route = createFileRoute("/bookings/")({
   head: () => ({
     meta: [
       { title: "الحجوزات — إدارة الملاعب" },

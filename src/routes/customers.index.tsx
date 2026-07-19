@@ -6,7 +6,7 @@ import { AppShell } from "@/components/app-shell";
 import { CustomerFormSheet } from "@/components/customer-form-sheet";
 import { customersQuery } from "@/lib/customers.queries";
 
-export const Route = createFileRoute("/customers")({
+export const Route = createFileRoute("/customers/")({
   head: () => ({
     meta: [
       { title: "العملاء — إدارة العملاء الدائمين" },
