@@ -33,9 +33,9 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  /* Sport brand tokens */
-  --color-pitch: var(--pitch);
-  --color-pitch-soft: var(--pitch-soft);
+  /* Real Estate Luxury Gold/Copper & Navy brand tokens */
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
   --color-ink: var(--ink);
   --color-ink-2: var(--ink-2);
   --color-stone-line: var(--stone-line);
@@ -53,7 +53,7 @@
     0 1px 3px 0 oklch(0.15 0.02 260 / 0.03);
   --shadow-elev-2: 0 4px 24px -8px oklch(0.15 0.02 260 / 0.08);
   --shadow-elev-3: 0 24px 60px -20px oklch(0.15 0.02 260 / 0.18);
-  --shadow-pitch: 0 12px 40px -12px oklch(0.72 0.19 155 / 0.45);
+  --shadow-gold: 0 12px 40px -12px oklch(0.70 0.16 55 / 0.45);
 
   --ease-stadium: cubic-bezier(0.32, 0.72, 0, 1);
 }
@@ -61,60 +61,60 @@
 :root {
   --radius: 1rem;
 
-  /* Stadium white base */
-  --background: oklch(0.985 0.005 240);
+  /* Luxury Warm Slate Base */
+  --background: oklch(0.985 0.005 60);
   --foreground: oklch(0.18 0.04 258);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.18 0.04 258);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.18 0.04 258);
 
-  --primary: oklch(0.72 0.19 155);       /* pitch green */
-  --primary-foreground: oklch(0.99 0.01 155);
+  --primary: oklch(0.68 0.16 55);       /* luxury gold / copper */
+  --primary-foreground: oklch(0.99 0.01 55);
 
-  --secondary: oklch(0.96 0.008 240);
+  --secondary: oklch(0.96 0.008 60);
   --secondary-foreground: oklch(0.18 0.04 258);
-  --muted: oklch(0.96 0.008 240);
+  --muted: oklch(0.96 0.008 60);
   --muted-foreground: oklch(0.52 0.02 258);
-  --accent: oklch(0.96 0.008 240);
+  --accent: oklch(0.96 0.008 60);
   --accent-foreground: oklch(0.18 0.04 258);
 
   --destructive: oklch(0.62 0.22 27);
   --destructive-foreground: oklch(0.99 0.01 27);
 
-  --border: oklch(0.92 0.01 250);
-  --input: oklch(0.92 0.01 250);
-  --ring: oklch(0.72 0.19 155);
+  --border: oklch(0.92 0.01 60);
+  --input: oklch(0.92 0.01 60);
+  --ring: oklch(0.68 0.16 55);
 
   /* Brand extras */
-  --pitch: oklch(0.72 0.19 155);
-  --pitch-soft: oklch(0.95 0.05 155);
-  --ink: oklch(0.19 0.04 258);        /* deep slate */
-  --ink-2: oklch(0.28 0.04 258);
-  --stone-line: oklch(0.93 0.01 250);
-  --warn: oklch(0.78 0.15 70);
+  --gold: oklch(0.68 0.16 55);
+  --gold-soft: oklch(0.96 0.04 55);
+  --ink: oklch(0.18 0.04 258);        /* deep navy slate */
+  --ink-2: oklch(0.26 0.04 258);
+  --stone-line: oklch(0.93 0.01 60);
+  --warn: oklch(0.75 0.15 70);
   --danger: oklch(0.62 0.22 27);
 }
 
 .dark {
   --background: oklch(0.14 0.02 258);
-  --foreground: oklch(0.98 0.005 240);
+  --foreground: oklch(0.98 0.005 60);
   --card: oklch(0.19 0.03 258);
-  --card-foreground: oklch(0.98 0.005 240);
+  --card-foreground: oklch(0.98 0.005 60);
   --popover: oklch(0.19 0.03 258);
-  --popover-foreground: oklch(0.98 0.005 240);
-  --primary: oklch(0.78 0.19 155);
+  --popover-foreground: oklch(0.98 0.005 60);
+  --primary: oklch(0.74 0.16 55);
   --primary-foreground: oklch(0.15 0.04 258);
   --secondary: oklch(0.24 0.03 258);
-  --secondary-foreground: oklch(0.98 0.005 240);
+  --secondary-foreground: oklch(0.98 0.005 60);
   --muted: oklch(0.24 0.03 258);
   --muted-foreground: oklch(0.72 0.02 258);
   --accent: oklch(0.24 0.03 258);
-  --accent-foreground: oklch(0.98 0.005 240);
+  --accent-foreground: oklch(0.98 0.005 60);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.78 0.19 155);
-  --pitch-soft: oklch(0.28 0.06 155);
+  --ring: oklch(0.74 0.16 55);
+  --gold-soft: oklch(0.28 0.06 55);
   --stone-line: oklch(1 0 0 / 10%);
 }
 
@@ -164,9 +164,9 @@
   box-shadow: var(--shadow-elev-3);
 }
 
-@utility pitch-chip {
-  background: var(--color-pitch-soft);
-  color: oklch(0.38 0.13 155);
+@utility gold-chip {
+  background: var(--color-gold-soft);
+  color: oklch(0.45 0.14 55);
   font-weight: 600;
 }
 

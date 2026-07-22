@@ -1,108 +1,290 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
-import { ChevronRight, ChevronLeft } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo } from "react";
+import { ChevronRight, ChevronLeft, Calendar as CalendarIcon, FileText, Clock, Wrench, Coins, ReceiptText, AlertTriangle, CheckCircle2, Building2, Filter } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { HOURS, formatDate, toArabicDigits, statusMeta, formatTime12 } from "@/lib/mock";
-import { bookingsQuery, courtsQuery, localDateKey } from "@/lib/bookings.queries";
+import { duesQuery } from "@/lib/dues.queries";
+import { paymentsQuery } from "@/lib/payments.queries";
+import { expensesQuery } from "@/lib/expenses.queries";
+import { contractsQuery } from "@/lib/contracts.queries";
+import { propertiesQuery } from "@/lib/properties.queries";
+import { maintenanceQuery } from "@/lib/maintenance.queries";
+import { formatDate, toArabicDigits, dueStatusMeta, type Due } from "@/lib/types";
+import { DueDetailSheet } from "@/components/due-detail-sheet";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/calendar")({
   head: () => ({
     meta: [
-      { title: "التقويم — إدارة الحجوزات" },
-      { name: "description", content: "تقويم يومي احترافي لعرض حجوزات الملاعب وحالة كل ساعة." },
+      { title: "التقويم — أحداث العقارات والدفعات والصيانة" },
+      { name: "description", content: "تقويم عقاري لمتابعة كافة الاستحقاقات، السداد، العقود، المصروفات، والصيانة." },
     ],
   }),
-  loader: ({ context }) => {
-    context.queryClient.ensureQueryData(courtsQuery);
-    context.queryClient.ensureQueryData(bookingsQuery({ date: localDateKey() }));
-  },
   component: CalendarPage,
 });
 
-function CalendarPage() {
-  const [dayOffset, setDayOffset] = useState(0);
-  const { data: courts } = useSuspenseQuery(courtsQuery);
-  const [courtId, setCourtId] = useState<string>(courts[0]?.id ?? "");
+type EventCategory = "due" | "payment" | "expense" | "contract_start" | "contract_end" | "maintenance";
 
+interface CalendarEvent {
+  id: string;
+  category: EventCategory;
+  dateStr: string;
+  propertyId?: string;
+  title: string;
+  subTitle: string;
+  amount?: number;
+  statusBadge?: { label: string; tone: string };
+  rawDue?: Due;
+}
+
+export function CalendarPage() {
+  const [dayOffset, setDayOffset] = useState(0);
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>("all");
+  const [selectedDue, setSelectedDue] = useState<Due | null>(null);
+  const [detailSheetOpen, setDetailSheetOpen] = useState(false);
+
+  const { data: properties = [] } = useQuery(propertiesQuery(""));
+
+  // Generate 14 days centered on selected offset
   const days = useMemo(() => {
     const base = new Date();
-    return Array.from({ length: 7 }, (_, i) => {
+    return Array.from({ length: 14 }, (_, i) => {
       const d = new Date(base);
-      d.setDate(base.getDate() + i - 2);
+      d.setDate(base.getDate() + i - 3);
       return d;
     });
   }, []);
 
-  const selectedDay = days[2 + dayOffset] ?? days[2];
-  const dateKey = localDateKey(selectedDay);
-  const { data: bookings = [] } = useSuspenseQuery(bookingsQuery({ date: dateKey, courtId }));
-  const courtById = (id: string) => courts.find((c) => c.id === id);
+  const selectedDay = days[3 + dayOffset] ?? days[3];
 
-  const bookedByHour = new Map<number, (typeof bookings)[number]>();
-  bookings
-    .filter((b) => b.status !== "cancelled")
-    .forEach((b) => {
-      const s = new Date(b.startAt).getHours();
-      bookedByHour.set(s, b);
+  // Helper to format ISO Date string YYYY-MM-DD
+  const toIsoDateStr = (date: Date | string) => {
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return "";
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+
+  const selectedDayIsoStr = toIsoDateStr(selectedDay);
+
+  const { data: dues = [] } = useQuery(duesQuery({}));
+  const { data: payments = [] } = useQuery(paymentsQuery({}));
+  const { data: expenses = [] } = useQuery(expensesQuery(""));
+  const { data: contracts = [] } = useQuery(contractsQuery({}));
+  const { data: maintenanceList = [] } = useQuery(maintenanceQuery({}));
+
+  // Build all events
+  const allEvents = useMemo(() => {
+    const list: CalendarEvent[] = [];
+
+    // Dues
+    dues.forEach((d) => {
+      const meta = dueStatusMeta(d.status);
+      list.push({
+        id: `due-${d.id}`,
+        category: "due",
+        dateStr: toIsoDateStr(d.dueDate),
+        propertyId: d.propertyId,
+        title: d.tenantName ? `استحقاق: ${d.tenantName}` : "استحقاق إيجار",
+        subTitle: `${d.propertyName} (وحدة ${d.unitNumber}) • ${d.title}`,
+        amount: d.amount - d.paidAmount,
+        statusBadge: { label: meta.label, tone: meta.tone },
+        rawDue: d,
+      });
     });
+
+    // Payments
+    payments.forEach((p) => {
+      list.push({
+        id: `pay-${p.id}`,
+        category: "payment",
+        dateStr: toIsoDateStr(p.paymentDate),
+        title: `سند قبض ${p.receiptNumber}`,
+        subTitle: `محصل من: ${p.tenantName || "مستأجر"} • ${p.propertyName || ""}`,
+        amount: p.amount,
+        statusBadge: { label: "تم التحصيل", tone: "bg-emerald-500/10 text-emerald-600" },
+      });
+    });
+
+    // Expenses
+    expenses.forEach((e) => {
+      list.push({
+        id: `exp-${e.id}`,
+        category: "expense",
+        dateStr: toIsoDateStr(e.expenseDate),
+        propertyId: e.propertyId ?? undefined,
+        title: `مصروف: ${e.description}`,
+        subTitle: `${e.propertyName || "عقار عام"} • ${e.vendor || ""}`,
+        amount: e.amount,
+        statusBadge: { label: "مصروف", tone: "bg-destructive/10 text-destructive" },
+      });
+    });
+
+    // Contract Starts & Ends
+    contracts.forEach((c) => {
+      list.push({
+        id: `c-start-${c.id}`,
+        category: "contract_start",
+        dateStr: toIsoDateStr(c.startDate),
+        title: `بداية عقد جديد #${c.contractNumber}`,
+        subTitle: `${c.tenantName} — ${c.propertyName} (وحدة ${c.unitNumber})`,
+        amount: c.rentAmount,
+        statusBadge: { label: "عقد جديد", tone: "bg-primary/10 text-primary" },
+      });
+      list.push({
+        id: `c-end-${c.id}`,
+        category: "contract_end",
+        dateStr: toIsoDateStr(c.endDate),
+        title: `انتهاء عقد #${c.contractNumber}`,
+        subTitle: `${c.tenantName} — ${c.propertyName} (وحدة ${c.unitNumber})`,
+        amount: c.rentAmount,
+        statusBadge: { label: "انتهاء عقد", tone: "bg-destructive/10 text-destructive" },
+      });
+    });
+
+    // Maintenance
+    maintenanceList.forEach((m) => {
+      list.push({
+        id: `maint-${m.id}`,
+        category: "maintenance",
+        dateStr: toIsoDateStr(m.createdAt),
+        propertyId: m.propertyId,
+        title: `طلب صيانة: ${m.title}`,
+        subTitle: `وحدة ${m.unitNumber} • أولية: ${m.priority}`,
+        statusBadge: { label: "صيانة", tone: "bg-sky-500/10 text-sky-600" },
+      });
+    });
+
+    return list;
+  }, [dues, payments, expenses, contracts, maintenanceList]);
+
+  // Filter events for selected date & selected property filter
+  const dayEvents = useMemo(() => {
+    return allEvents.filter((ev) => {
+      if (ev.dateStr !== selectedDayIsoStr) return false;
+      if (selectedPropertyId !== "all" && ev.propertyId && ev.propertyId !== selectedPropertyId) return false;
+      return true;
+    });
+  }, [allEvents, selectedDayIsoStr, selectedPropertyId]);
 
   const monthLabel = formatDate(selectedDay, { month: true, year: true });
 
+  const getEventCategoryStyle = (cat: EventCategory) => {
+    switch (cat) {
+      case "payment":
+      case "contract_start":
+        return {
+          bar: "bg-emerald-500",
+          bg: "bg-emerald-500/10 border-emerald-500/20",
+          icon: <CheckCircle2 className="size-4 text-emerald-500" />,
+        };
+      case "due":
+        return {
+          bar: "bg-primary",
+          bg: "bg-primary/10 border-primary/20",
+          icon: <Coins className="size-4 text-primary" />,
+        };
+      case "expense":
+      case "contract_end":
+        return {
+          bar: "bg-destructive",
+          bg: "bg-destructive/10 border-destructive/20",
+          icon: <ReceiptText className="size-4 text-destructive" />,
+        };
+      case "maintenance":
+      default:
+        return {
+          bar: "bg-sky-500",
+          bg: "bg-sky-500/10 border-sky-500/20",
+          icon: <Wrench className="size-4 text-sky-500" />,
+        };
+    }
+  };
+
   return (
     <AppShell>
-      <header className="sticky top-0 z-30 bg-background/85 px-6 pb-4 pt-8 backdrop-blur-md">
+      <header className="sticky top-0 z-30 bg-background/85 px-6 pb-4 pt-8 backdrop-blur-md border-b border-stone-line/70">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
               {monthLabel}
             </p>
-            <h1 className="mt-1 text-xl font-bold tracking-tight">التقويم</h1>
+            <h1 className="mt-1 text-xl font-bold tracking-tight">التقويم العقاري الأنيق</h1>
           </div>
           <div className="flex gap-1">
-            <IconBtn onClick={() => setDayOffset((d) => Math.max(d - 1, -2))}>
+            <button
+              onClick={() => setDayOffset((d) => Math.max(d - 1, -3))}
+              className="grid size-9 place-items-center rounded-full border border-stone-line bg-card text-foreground transition active:scale-95 hover:bg-muted"
+            >
               <ChevronRight className="size-4" />
-            </IconBtn>
-            <IconBtn onClick={() => setDayOffset((d) => Math.min(d + 1, 4))}>
+            </button>
+            <button
+              onClick={() => setDayOffset((d) => Math.min(d + 1, 9))}
+              className="grid size-9 place-items-center rounded-full border border-stone-line bg-card text-foreground transition active:scale-95 hover:bg-muted"
+            >
               <ChevronLeft className="size-4" />
-            </IconBtn>
+            </button>
           </div>
         </div>
 
-        <div className="no-scrollbar -mx-6 mt-5 flex gap-3 overflow-x-auto px-6 pb-1">
+        {/* Property Filter Bar (كل العقارات / برج الياسمين / إلخ) */}
+        <div className="mt-4 flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+          <button
+            onClick={() => setSelectedPropertyId("all")}
+            className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-bold transition border ${
+              selectedPropertyId === "all"
+                ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                : "border-stone-line bg-card text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            كل العقارات
+          </button>
+          {properties.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => setSelectedPropertyId(p.id)}
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-bold transition border ${
+                selectedPropertyId === p.id
+                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                  : "border-stone-line bg-card text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {p.name}
+            </button>
+          ))}
+        </div>
+
+        {/* Dynamic Days Selector Slider */}
+        <div className="no-scrollbar -mx-6 mt-3 flex gap-3 overflow-x-auto px-6 pb-2">
           {days.map((d, i) => {
-            const active = i - 2 === dayOffset;
-            const isToday = i === 2;
+            const active = i - 3 === dayOffset;
+            const isToday = i === 3;
+            const dateIso = toIsoDateStr(d);
+            const hasEvents = allEvents.some((ev) => ev.dateStr === dateIso);
+
             return (
               <button
                 key={i}
-                onClick={() => setDayOffset(i - 2)}
-                className={cn(
-                  "group flex shrink-0 flex-col items-center gap-1.5",
-                )}
+                onClick={() => setDayOffset(i - 3)}
+                className="group flex shrink-0 flex-col items-center gap-1.5 transition-transform active:scale-95"
               >
-                <span
-                  className={cn(
-                    "text-[10px] font-bold tracking-wider transition",
-                    active ? "text-foreground" : "text-muted-foreground",
-                  )}
-                >
+                <span className={`text-[10px] font-bold tracking-wider transition ${active ? "text-foreground font-extrabold" : "text-muted-foreground"}`}>
                   {formatDate(d, { weekday: "short" })}
                 </span>
                 <span
-                  className={cn(
-                    "tabular relative grid size-14 place-items-center rounded-full border-2 text-lg font-bold transition-all",
+                  className={`tabular relative grid size-13 place-items-center rounded-2xl border-2 text-base font-bold transition-all ${
                     active
-                      ? "border-transparent bg-ink text-white shadow-[var(--shadow-elev-2)]"
+                      ? "border-transparent bg-ink text-white shadow-md scale-105"
                       : isToday
-                        ? "border-primary/50 bg-primary/5 text-primary"
-                        : "border-stone-line bg-card text-foreground",
-                  )}
+                      ? "border-primary/60 bg-primary/10 text-primary"
+                      : "border-stone-line bg-card text-foreground"
+                  }`}
                 >
                   {toArabicDigits(d.getDate())}
-                  {isToday && !active && (
-                    <span className="absolute -bottom-0.5 left-1/2 size-1 -translate-x-1/2 rounded-full bg-primary" />
+                  {hasEvents && !active && (
+                    <span className="absolute bottom-1 left-1/2 size-1.5 -translate-x-1/2 rounded-full bg-primary" />
                   )}
                 </span>
               </button>
@@ -111,120 +293,80 @@ function CalendarPage() {
         </div>
       </header>
 
-      <main className="space-y-6 px-5 pt-6">
-        <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5">
-          {courts.map((c) => {
-            const active = courtId === c.id;
-            return (
-              <button
-                key={c.id}
-                onClick={() => setCourtId(c.id)}
-                className={cn(
-                  "shrink-0 rounded-full border px-4 py-2 text-xs font-bold transition-all",
-                  active
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-stone-line bg-card text-muted-foreground",
-                )}
-              >
-                {c.sportLabel} — {c.name.split("—")[1]?.trim()}
-              </button>
-            );
-          })}
-        </div>
-
-        <section className="card-elev overflow-hidden">
-          <div className="flex items-center justify-between border-b border-stone-line/70 px-5 py-4">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                جدول الساعات
-              </p>
-              <p className="mt-0.5 text-sm font-bold">{courtById(courtId)?.name}</p>
-            </div>
-            <div className="flex items-center gap-3 text-[10px] font-semibold text-muted-foreground">
-              <LegendDot className="bg-primary" label="محجوز" />
-              <LegendDot className="bg-ink" label="تدريب" />
-              <LegendDot className="bg-stone-line" label="متاح" />
-            </div>
+      <main className="space-y-4 px-5 pt-5">
+        <section className="card-elev overflow-hidden p-5 space-y-4">
+          <div className="flex items-center justify-between border-b border-stone-line/70 pb-3">
+            <h2 className="text-sm font-bold flex items-center gap-2">
+              <CalendarIcon className="size-4 text-primary" />
+              أحداث {formatDate(selectedDay, { weekday: "long", day: true, month: true })}
+            </h2>
+            <span className="text-xs font-bold text-muted-foreground rounded-full bg-muted px-2.5 py-1">
+              {toArabicDigits(dayEvents.length)} حدث
+            </span>
           </div>
 
-          <ol className="divide-y divide-stone-line/70">
-            {HOURS.map((h) => {
-              const label24 = `${String(h).padStart(2, "0")}:00`;
-              const label12 = formatTime12(label24);
-              const b = bookedByHour.get(h);
-              const meta = b ? statusMeta(b.status) : null;
-              return (
-                <li key={h} className="flex items-stretch gap-3 px-5 py-3">
-                  <div className="tabular w-16 shrink-0 pt-1 text-[11px] font-bold text-muted-foreground">
-                    {label12}
-                  </div>
-                  {b ? (
-                    <Link
-                      to="/bookings/$id"
-                      params={{ id: b.id }}
-                      className={cn(
-                        "flex-1 rounded-2xl px-4 py-3 border-r-4 shadow-sm animate-slot transition active:scale-[0.99]",
-                        b.status === "confirmed" && "bg-primary/8 border-primary",
-                        b.status === "pending" &&
-                          "bg-[color:var(--color-warn)]/10 border-[color:var(--color-warn)]",
-                        b.status === "training" && "bg-ink text-white border-primary",
-                        b.status === "maintenance" && "bg-muted border-stone-line",
-                      )}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <p className={cn("truncate text-sm font-bold", b.status === "training" && "text-white")}>
-                          {b.customer}
-                        </p>
-                        <span
-                          className={cn(
-                            "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold",
-                            b.status === "training" ? "bg-white/10 text-white" : meta!.tone,
-                          )}
-                        >
-                          {meta!.label}
-                        </span>
+          {dayEvents.length === 0 ? (
+            <div className="py-10 text-center text-xs text-muted-foreground space-y-2">
+              <div className="grid size-12 place-items-center rounded-full bg-muted/60 mx-auto text-muted-foreground">
+                <CalendarIcon className="size-5" />
+              </div>
+              <p className="font-bold">لا يوجد أحداث أو دفعات مجدولة لهذا اليوم بالتصفية المحددة.</p>
+              <p className="text-[11px] opacity-70">اختر عقاراً آخر أو يوماً آخر من شريط التواريخ أعلاه لمعاينة الأحداث.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {dayEvents.map((ev, idx) => {
+                const style = getEventCategoryStyle(ev.category);
+                return (
+                  <div
+                    key={ev.id}
+                    onClick={() => {
+                      if (ev.rawDue) {
+                        setSelectedDue(ev.rawDue);
+                        setDetailSheetOpen(true);
+                      }
+                    }}
+                    className={cn(
+                      "p-4 rounded-2xl border flex items-center justify-between gap-3 text-xs transition-all hover:shadow-md animate-rise cursor-pointer",
+                      style.bg,
+                    )}
+                    style={{ animationDelay: `${idx * 40}ms` }}
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="grid size-10 place-items-center rounded-xl bg-background shadow-sm shrink-0">
+                        {style.icon}
                       </div>
-                      <p
-                        className={cn(
-                          "tabular mt-1 text-[11px] font-medium",
-                          b.status === "training" ? "text-white/60" : "text-muted-foreground",
-                        )}
-                      >
-                        {formatTime12(b.start)} — {formatTime12(b.end)}
-                        {b.price > 0 && <> • {b.price} ر.س</>}
-                      </p>
-                    </Link>
-                  ) : (
-                    <div className="flex-1 rounded-2xl border border-dashed border-stone-line px-4 py-3 text-right text-[11px] font-semibold text-muted-foreground">
-                      متاح
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold text-sm text-foreground truncate">{ev.title}</h3>
+                          {ev.statusBadge && (
+                            <span className={cn("rounded-full px-2 py-0.5 text-[9px] font-bold shrink-0", ev.statusBadge.tone)}>
+                              {ev.statusBadge.label}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-muted-foreground mt-0.5 truncate">{ev.subTitle}</p>
+                      </div>
                     </div>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
+
+                    {ev.amount !== undefined && (
+                      <div className="text-left font-extrabold text-sm tabular shrink-0 text-foreground">
+                        {toArabicDigits(ev.amount)} <span className="text-[10px] font-medium text-muted-foreground">ر.س</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </section>
       </main>
+
+      <DueDetailSheet
+        due={selectedDue}
+        open={detailSheetOpen}
+        onOpenChange={setDetailSheetOpen}
+      />
     </AppShell>
-  );
-}
-
-function IconBtn({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="grid size-9 place-items-center rounded-full border border-stone-line bg-card text-foreground transition active:scale-95"
-    >
-      {children}
-    </button>
-  );
-}
-
-function LegendDot({ className, label }: { className: string; label: string }) {
-  return (
-    <span className="flex items-center gap-1">
-      <span className={cn("size-2 rounded-full", className)} />
-      {label}
-    </span>
   );
 }

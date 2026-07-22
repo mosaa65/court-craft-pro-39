@@ -1,133 +1,214 @@
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { useSuspenseQuery, useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ArrowRight, Pencil, Plus, CalendarDays, Coins, TrendingUp } from "lucide-react";
+import { ArrowRight, Plus, Building2, Home, Trash2, Edit, CheckCircle2 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { CourtFormSheet } from "@/components/court-form-sheet";
-import { BookingSheet } from "@/components/booking-sheet";
-import { BookingCard } from "@/components/booking-card";
-import { courtQuery, bookingsQuery, localDateKey } from "@/lib/bookings.queries";
-import { toArabicDigits } from "@/lib/mock";
+import { propertyQuery } from "@/lib/properties.queries";
+import { unitsQuery } from "@/lib/units.queries";
+import { deletePropertyFn } from "@/lib/properties.functions";
+import { deleteUnitFn } from "@/lib/units.functions";
+import { UnitFormSheet } from "@/components/unit-form-sheet";
+import { PropertyFormSheet } from "@/components/property-form-sheet";
+import { ContractFormSheet } from "@/components/contract-form-sheet";
+import { toArabicDigits, unitStatusMeta, unitTypeLabel, propertyTypeLabel } from "@/lib/types";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/courts/$id")({
-  head: ({ params }) => ({
-    meta: [
-      { title: `ملعب — ${params.id.slice(0, 12)}` },
-      { name: "description", content: "تفاصيل الملعب والحجوزات القادمة والإحصائيات." },
-    ],
+  head: () => ({
+    meta: [{ title: "تفاصيل العقار — إدارة الوحدات" }],
   }),
-  loader: ({ context, params }) => {
-    context.queryClient.ensureQueryData(courtQuery(params.id));
-    context.queryClient.ensureQueryData(bookingsQuery({ courtId: params.id, date: localDateKey() }));
-  },
-  component: CourtDetailPage,
-  errorComponent: ({ error }) => (
-    <AppShell>
-      <div className="px-6 pt-12 text-center">
-        <p className="text-sm font-bold text-destructive">تعذّر تحميل الملعب</p>
-        <p className="mt-1 text-xs text-muted-foreground">{error.message}</p>
-        <Link to="/courts" className="mt-6 inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-bold text-white">
-          العودة للملاعب
-        </Link>
-      </div>
-    </AppShell>
-  ),
-  notFoundComponent: () => (
-    <AppShell><div className="px-6 pt-12 text-center text-sm text-muted-foreground">الملعب غير موجود.</div></AppShell>
-  ),
+  component: PropertyDetailPage,
 });
 
-function CourtDetailPage() {
+function PropertyDetailPage() {
   const { id } = Route.useParams();
-  const router = useRouter();
-  const { data: court } = useSuspenseQuery(courtQuery(id));
-  const { data: todayBookings = [] } = useQuery(bookingsQuery({ courtId: id, date: localDateKey() }));
-  const { data: upcoming = [] } = useQuery(bookingsQuery({ courtId: id }));
+  const queryClient = useQueryClient();
+  const { data: property, isLoading } = useQuery(propertyQuery(id));
+  const { data: units = [] } = useQuery(unitsQuery({ propertyId: id }));
 
-  const [editOpen, setEditOpen] = useState(false);
-  const [bookOpen, setBookOpen] = useState(false);
+  const [addUnitOpen, setAddUnitOpen] = useState(false);
+  const [editPropOpen, setEditPropOpen] = useState(false);
+  const [contractOpen, setContractOpen] = useState(false);
+  const [selectedUnitIdForLease, setSelectedUnitIdForLease] = useState<string>("");
 
-  const active = todayBookings.filter((b) => b.status !== "cancelled");
-  const revenueToday = active.reduce((s, b) => s + b.price, 0);
-  const occupancy = Math.round((active.length / 14) * 100);
-  const upcomingActive = upcoming.filter((b) => b.status !== "cancelled" && new Date(b.startAt) >= new Date()).slice(0, 6);
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      if (!confirm("هل أنت تأكد من حذف هذا العقار وجميع وحداته؟")) return;
+      await deletePropertyFn({ data: { id } });
+    },
+    onSuccess: () => {
+      toast.success("تم حذف العقار بنجاح");
+      queryClient.invalidateQueries({ queryKey: ["properties"] });
+      window.history.back();
+    },
+  });
+
+  const deleteUnitMutation = useMutation({
+    mutationFn: async (unitId: string) => {
+      if (!confirm("هل أنت تأكد من حذف هذه الوحدة؟")) return;
+      await deleteUnitFn({ data: { id: unitId } });
+    },
+    onSuccess: () => {
+      toast.success("تم حذف الوحدة بنجاح");
+      queryClient.invalidateQueries({ queryKey: ["units"] });
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <AppShell>
+        <div className="p-8 text-center text-xs text-muted-foreground">جارِ التحميل...</div>
+      </AppShell>
+    );
+  }
+
+  if (!property) {
+    return (
+      <AppShell>
+        <div className="p-8 text-center text-xs text-muted-foreground">العقار غير موجود</div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell>
-      <div className="relative">
-        <img src={court.image} alt={court.name} className="aspect-[16/10] w-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-b from-ink/50 via-ink/10 to-background" />
-        <div className="absolute inset-x-0 top-0 flex items-center justify-between p-4">
-          <button
-            onClick={() => router.history.back()}
-            aria-label="رجوع"
-            className="grid size-10 place-items-center rounded-full bg-white/90 text-ink shadow-md backdrop-blur"
-          >
-            <ArrowRight className="size-4" />
-          </button>
-          <button
-            onClick={() => setEditOpen(true)}
-            className="flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-[11px] font-bold text-ink shadow-md backdrop-blur"
-          >
-            <Pencil className="size-3.5" /> تعديل
-          </button>
-        </div>
-        <div className="absolute inset-x-0 bottom-0 p-5 text-white">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/70">{court.sportLabel}</p>
-          <h1 className="mt-1 text-2xl font-bold leading-tight">{court.name}</h1>
-          <p className="mt-1 text-xs text-white/80">{court.surface}</p>
-        </div>
-      </div>
-
-      <main className="space-y-4 px-5 pt-5">
-        <section className="grid grid-cols-3 gap-2">
-          <MiniKpi icon={<CalendarDays className="size-4" />} label="حجوزات اليوم" value={toArabicDigits(active.length)} />
-          <MiniKpi icon={<TrendingUp className="size-4" />} label="نسبة الإشغال" value={`${toArabicDigits(occupancy)}٪`} />
-          <MiniKpi icon={<Coins className="size-4" />} label="إيراد اليوم" value={`${toArabicDigits(revenueToday)}`} suffix="ر.س" />
-        </section>
-
-        <section className="card-elev flex items-center justify-between p-5">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">السعر بالساعة</p>
-            <p className="tabular mt-1 text-2xl font-bold">
-              {toArabicDigits(court.pricePerHour)} <span className="text-xs font-medium text-muted-foreground">ر.س</span>
-            </p>
+      <header className="sticky top-0 z-30 bg-background/85 px-6 pb-4 pt-8 backdrop-blur-md">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link
+              to="/courts"
+              className="grid size-10 place-items-center rounded-full bg-muted text-ink"
+            >
+              <ArrowRight className="size-4" />
+            </Link>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                {propertyTypeLabel(property.type)} • {property.city}
+              </p>
+              <h1 className="mt-0.5 text-xl font-bold tracking-tight">{property.name}</h1>
+            </div>
           </div>
-          <button
-            onClick={() => setBookOpen(true)}
-            className="flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-[var(--shadow-pitch)] active:scale-95"
-          >
-            <Plus className="size-4" /> حجز على هذا الملعب
-          </button>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setEditPropOpen(true)}
+              className="grid size-9 place-items-center rounded-full bg-muted text-muted-foreground hover:text-foreground"
+            >
+              <Edit className="size-4" />
+            </button>
+            <button
+              onClick={() => deleteMutation.mutate()}
+              className="grid size-9 place-items-center rounded-full bg-destructive/10 text-destructive"
+            >
+              <Trash2 className="size-4" />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="space-y-6 px-5 pt-4">
+        {/* Banner */}
+        <section className="card-elev overflow-hidden">
+          {property.imageUrl ? (
+            <img src={property.imageUrl} alt={property.name} className="aspect-[16/9] w-full object-cover" />
+          ) : (
+            <div className="aspect-[16/9] w-full bg-gradient-to-br from-ink to-stone-800 flex items-center justify-center text-white/30">
+              <Building2 className="size-16" />
+            </div>
+          )}
+          <div className="p-4 space-y-2">
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-muted-foreground">الحي والموقع:</span>
+              <span className="font-bold">{property.district || property.city}</span>
+            </div>
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-muted-foreground">عدد الطوابق والمساحة:</span>
+              <span className="font-bold">{toArabicDigits(property.floorsCount)} طوابق • {toArabicDigits(property.totalArea)} م²</span>
+            </div>
+            {property.description && (
+              <p className="text-xs text-muted-foreground pt-2 border-t border-stone-line/70">
+                {property.description}
+              </p>
+            )}
+          </div>
         </section>
 
-        <section>
-          <h2 className="mb-3 mt-2 text-sm font-bold">الحجوزات القادمة</h2>
-          {upcomingActive.length === 0 ? (
-            <div className="card-elev p-6 text-center text-xs text-muted-foreground">لا توجد حجوزات قادمة على هذا الملعب.</div>
+        {/* Units Section Header */}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold">وحدات العقار ({toArabicDigits(units.length)})</h2>
+              <p className="text-xs text-muted-foreground">الشقق، المحلات، والمكاتب المتاحة والمؤجرة</p>
+            </div>
+            <button
+              onClick={() => setAddUnitOpen(true)}
+              className="flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-2 text-xs font-bold text-primary-foreground shadow-md active:scale-95 transition"
+            >
+              <Plus className="size-3.5" /> وحدة جديدة
+            </button>
+          </div>
+
+          {units.length === 0 ? (
+            <div className="card-elev p-8 text-center text-xs text-muted-foreground">
+              لا توجد وحدات مضافة بعد في هذا العقار. اضغط زر "وحدة جديدة" لإضافة شقة أو محل.
+            </div>
           ) : (
-            <div className="space-y-2">
-              {upcomingActive.map((b) => <BookingCard key={b.id} booking={b} court={court} showDate />)}
+            <div className="space-y-2.5">
+              {units.map((u) => {
+                const meta = unitStatusMeta(u.status);
+                return (
+                  <div key={u.id} className="card-elev p-4 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="grid size-11 place-items-center rounded-2xl bg-primary/10 text-primary font-bold text-sm">
+                        <Home className="size-5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-sm font-bold">وحدة {u.unitNumber}</h3>
+                          <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${meta.tone}`}>
+                            {meta.label}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {unitTypeLabel(u.type)} • طابق {toArabicDigits(u.floor)} • {toArabicDigits(u.rooms)} غرف
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-left shrink-0 space-y-1">
+                      <p className="tabular text-sm font-bold">
+                        {toArabicDigits(u.rentPrice)} <span className="text-[10px] text-muted-foreground">ر.س</span>
+                      </p>
+                      {u.status === "available" ? (
+                        <button
+                          onClick={() => {
+                            setSelectedUnitIdForLease(u.id);
+                            setContractOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1 rounded-full bg-ink px-2.5 py-1 text-[10px] font-bold text-white shadow"
+                        >
+                          تأجير الآن
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => deleteUnitMutation.mutate(u.id)}
+                          className="text-[10px] font-bold text-destructive hover:underline"
+                        >
+                          حذف
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </section>
       </main>
 
-      <CourtFormSheet open={editOpen} onOpenChange={setEditOpen} editing={court} />
-      <BookingSheet open={bookOpen} onOpenChange={setBookOpen} initialCourtId={court.id} />
+      <UnitFormSheet open={addUnitOpen} onOpenChange={setAddUnitOpen} propertyId={id} />
+      <PropertyFormSheet open={editPropOpen} onOpenChange={setEditPropOpen} property={property} />
+      <ContractFormSheet open={contractOpen} onOpenChange={setContractOpen} defaultUnitId={selectedUnitIdForLease} />
     </AppShell>
-  );
-}
-
-function MiniKpi({ icon, label, value, suffix }: { icon: React.ReactNode; label: string; value: string; suffix?: string }) {
-  return (
-    <div className="card-elev p-3">
-      <div className="text-muted-foreground">{icon}</div>
-      <p className="mt-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p className="tabular mt-1 text-base font-bold">
-        {value}
-        {suffix && <span className="mr-1 text-[10px] font-medium text-muted-foreground">{suffix}</span>}
-      </p>
-    </div>
   );
 }

@@ -1,215 +1,212 @@
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import {
-  ArrowRight,
-  Pencil,
-  Trash2,
-  Phone,
-  MapPin,
-  Clock,
-  Coins,
-  StickyNote,
-  Calendar as CalendarIcon,
-  Repeat,
-} from "lucide-react";
+import { ArrowRight, FileText, Calendar, DollarSign, CheckCircle2, Trash2, MessageCircle } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { CancelBookingDialog } from "@/components/cancel-booking-dialog";
-import { BookingSheet } from "@/components/booking-sheet";
-import { BookingPaymentCard } from "@/components/booking-payment-card";
-import { bookingQuery, courtsQuery } from "@/lib/bookings.queries";
-import {
-  formatDate,
-  formatDuration,
-  durationMinutes,
-  statusMeta,
-  toArabicDigits,
-  formatTime12,
-} from "@/lib/mock";
-import { cn } from "@/lib/utils";
+import { contractQuery } from "@/lib/contracts.queries";
+import { duesQuery } from "@/lib/dues.queries";
+import { paymentsQuery } from "@/lib/payments.queries";
+import { updateContractStatusFn, deleteContractFn } from "@/lib/contracts.functions";
+import { PaymentSheet } from "@/components/payment-sheet";
+import { toArabicDigits, formatDate, contractStatusMeta, dueStatusMeta, paymentCycleLabel, openWhatsApp } from "@/lib/types";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/bookings/$id")({
-  head: ({ params }) => ({
-    meta: [
-      { title: `تفاصيل الحجز — ${params.id.slice(0, 8)}` },
-      { name: "description", content: "تفاصيل الحجز الكاملة مع إمكانية التعديل والإلغاء." },
-    ],
+  head: () => ({
+    meta: [{ title: "تفاصيل العقد — جدول الاستحقاقات" }],
   }),
-  loader: ({ context, params }) => {
-    context.queryClient.ensureQueryData(bookingQuery(params.id));
-    context.queryClient.ensureQueryData(courtsQuery);
-  },
-  component: BookingDetailPage,
-  errorComponent: ({ error }) => (
-    <AppShell>
-      <div className="px-6 pt-12 text-center">
-        <p className="text-sm font-bold text-destructive">تعذّر تحميل الحجز</p>
-        <p className="mt-1 text-xs text-muted-foreground">{error.message}</p>
-        <Link to="/bookings" className="mt-6 inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-bold text-white">
-          العودة للحجوزات
-        </Link>
-      </div>
-    </AppShell>
-  ),
-  notFoundComponent: () => (
-    <AppShell>
-      <div className="px-6 pt-12 text-center text-sm text-muted-foreground">الحجز غير موجود.</div>
-    </AppShell>
-  ),
+  component: ContractDetailPage,
 });
 
-function BookingDetailPage() {
+function ContractDetailPage() {
   const { id } = Route.useParams();
-  const router = useRouter();
-  const { data: booking } = useSuspenseQuery(bookingQuery(id));
-  const { data: courts } = useSuspenseQuery(courtsQuery);
-  const court = courts.find((c) => c.id === booking.courtId);
-  const meta = statusMeta(booking.status);
-  const startDate = new Date(booking.startAt);
-  const durMin = durationMinutes(booking.startAt, booking.endAt);
+  const queryClient = useQueryClient();
+  const { data: contract, isLoading } = useQuery(contractQuery(id));
+  const { data: dues = [] } = useQuery(duesQuery({ contractId: id }));
+  const { data: payments = [] } = useQuery(paymentsQuery({ contractId: id }));
 
-  const [editOpen, setEditOpen] = useState(false);
-  const [cancelOpen, setCancelOpen] = useState(false);
+  const [paymentSheetOpen, setPaymentSheetOpen] = useState(false);
+  const [selectedDueForPay, setSelectedDueForPay] = useState<string>("");
+
+  const statusMutation = useMutation({
+    mutationFn: async (status: "active" | "expired" | "terminated" | "cancelled" | "renewed") => {
+      await updateContractStatusFn({ data: { id, status } });
+    },
+    onSuccess: () => {
+      toast.success("تم تحديث حالة العقد");
+      queryClient.invalidateQueries({ queryKey: ["contract", id] });
+      queryClient.invalidateQueries({ queryKey: ["contracts"] });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      if (!confirm("هل أنت تأكد من إلغاء/حذف العقد؟ ستعود الوحدة لحالة متاحة.")) return;
+      await deleteContractFn({ data: { id } });
+    },
+    onSuccess: () => {
+      toast.success("تم إلغاء العقد بنجاح");
+      queryClient.invalidateQueries({ queryKey: ["contracts"] });
+      window.history.back();
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <AppShell>
+        <div className="p-8 text-center text-xs text-muted-foreground">جارِ التحميل...</div>
+      </AppShell>
+    );
+  }
+
+  if (!contract) {
+    return (
+      <AppShell>
+        <div className="p-8 text-center text-xs text-muted-foreground">العقد غير موجود</div>
+      </AppShell>
+    );
+  }
+
+  const meta = contractStatusMeta(contract.status);
 
   return (
     <AppShell>
-      <div className="relative">
-        {court?.image ? (
-          <img src={court.image} alt={court.name} className="aspect-[16/10] w-full object-cover" />
-        ) : (
-          <div className="aspect-[16/10] w-full bg-muted" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-b from-ink/60 via-ink/10 to-background" />
-        <div className="absolute inset-x-0 top-0 flex items-center justify-between p-4">
-          <button
-            onClick={() => router.history.back()}
-            className="grid size-10 place-items-center rounded-full bg-white/90 text-ink shadow-md backdrop-blur"
-            aria-label="رجوع"
-          >
-            <ArrowRight className="size-4" />
-          </button>
-          <div className="flex items-center gap-2">
-            {booking.recurrenceGroupId && (
-              <span className="flex items-center gap-1 rounded-full bg-primary/90 px-3 py-1 text-[10px] font-bold text-primary-foreground backdrop-blur">
-                <Repeat className="size-3" /> أسبوعي
-              </span>
-            )}
-            <span className={cn("rounded-full px-3 py-1 text-[11px] font-bold backdrop-blur", meta.tone)}>
-              {meta.label}
-            </span>
-          </div>
-        </div>
-        <div className="absolute inset-x-0 bottom-0 p-5 text-white">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/70">
-            حجز #{id.slice(0, 8)}
-          </p>
-          <h1 className="mt-1 text-2xl font-bold leading-tight">{booking.customer}</h1>
-          <p className="mt-1 text-xs text-white/80">{court?.name ?? booking.courtId}</p>
-        </div>
-      </div>
-
-      <main className="space-y-4 px-5 pt-5">
-        <section className="card-elev p-5">
+      <header className="sticky top-0 z-30 bg-background/85 px-6 pb-4 pt-8 backdrop-blur-md">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="grid size-11 place-items-center rounded-2xl bg-primary/10 text-primary">
-              <CalendarIcon className="size-5" />
-            </div>
-            <div className="flex-1">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">التاريخ</p>
-              <p className="text-sm font-bold">
-                {formatDate(startDate, { weekday: "long", day: true, month: true, year: true })}
+            <Link
+              to="/bookings"
+              className="grid size-10 place-items-center rounded-full bg-muted text-ink"
+            >
+              <ArrowRight className="size-4" />
+            </Link>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                رقم العقد
               </p>
+              <h1 className="mt-0.5 text-xl font-bold tracking-tight">{contract.contractNumber}</h1>
             </div>
           </div>
-          <div className="mt-4 grid grid-cols-3 gap-3">
-            <MiniStat icon={<Clock className="size-4" />} label="الوقت" value={`${formatTime12(booking.start)} — ${formatTime12(booking.end)}`} />
-            <MiniStat icon={<Clock className="size-4" />} label="المدة" value={formatDuration(durMin)} />
-            <MiniStat icon={<Coins className="size-4" />} label="السعر" value={`${toArabicDigits(booking.price)} ر.س`} />
+
+          <span className={`rounded-full px-3 py-1 text-xs font-bold ${meta.tone}`}>
+            {meta.label}
+          </span>
+        </div>
+      </header>
+
+      <main className="space-y-6 px-5 pt-4">
+        {/* Contract Info Card */}
+        <section className="card-elev p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">المستأجر:</p>
+              <h2 className="text-base font-bold text-foreground">{contract.tenantName}</h2>
+            </div>
+            {contract.tenantPhone && (
+              <button
+                onClick={() => openWhatsApp(contract.tenantPhone!, `مرحباً ${contract.tenantName}، بخصوص العقد ${contract.contractNumber}.`)}
+                className="flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-500/10 px-3 py-1.5 rounded-full"
+              >
+                <MessageCircle className="size-3.5" /> واتساب
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-stone-line/70">
+            <div>
+              <span className="text-muted-foreground block">العقار والوحدة:</span>
+              <span className="font-bold">{contract.propertyName} (وحدة {contract.unitNumber})</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground block">إجمالي مبلغ الإيجار:</span>
+              <span className="font-bold tabular text-primary">{toArabicDigits(contract.rentAmount)} ر.س</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground block">مدة العقد:</span>
+              <span className="font-medium">{toArabicDigits(contract.durationMonths)} أشهر ({paymentCycleLabel(contract.paymentCycle)})</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground block">تاريخ العقد:</span>
+              <span className="font-medium">{formatDate(contract.startDate, { day: true, month: true, year: true })}</span>
+            </div>
+          </div>
+
+          <div className="pt-2 flex items-center justify-between border-t border-stone-line/70 text-xs">
+            <button
+              onClick={() => statusMutation.mutate("terminated")}
+              className="text-xs font-bold text-amber-600 hover:underline"
+            >
+              إنهاء / فسخ العقد
+            </button>
+            <button
+              onClick={() => deleteMutation.mutate()}
+              className="text-xs font-bold text-destructive hover:underline"
+            >
+              حذف / إلغاء
+            </button>
           </div>
         </section>
 
-        {court && (
-          <Link to="/courts/$id" params={{ id: court.id }} className="card-elev flex items-center gap-3 p-5 transition active:scale-[0.99]">
-            <div className="grid size-11 place-items-center rounded-2xl bg-ink/5 text-ink">
-              <MapPin className="size-5" />
+        {/* Dues Schedule */}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold">جدول الاستحقاقات ({toArabicDigits(dues.length)})</h2>
+              <p className="text-xs text-muted-foreground">جدولة الدفعات المستحقة ومتابعة السداد</p>
             </div>
-            <div className="flex-1">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">الملعب</p>
-              <p className="text-sm font-bold">{court.name}</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">{court.surface}</p>
-            </div>
-            <div className="text-left">
-              <p className="tabular text-lg font-bold">{court.pricePerHour}</p>
-              <p className="text-[10px] font-medium text-muted-foreground">ر.س / ساعة</p>
-            </div>
-          </Link>
-        )}
-
-        {booking.status !== "cancelled" && booking.status !== "maintenance" && (
-          <BookingPaymentCard booking={booking} />
-        )}
-
-        <section className="card-elev p-5">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">العميل</p>
-          <p className="mt-1 text-base font-bold">{booking.customer}</p>
-          {booking.phone && (
-            <a
-              href={`tel:${booking.phone}`}
-              className="mt-3 flex items-center gap-2 rounded-xl bg-muted px-3 py-2 text-sm font-semibold"
-              dir="ltr"
-            >
-              <Phone className="size-4 text-primary" />
-              {booking.phone}
-            </a>
-          )}
-        </section>
-
-        {booking.notes && (
-          <section className="card-elev p-5">
-            <div className="flex items-center gap-2">
-              <StickyNote className="size-4 text-muted-foreground" />
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">ملاحظات</p>
-            </div>
-            <p className="mt-2 text-sm leading-relaxed">{booking.notes}</p>
-          </section>
-        )}
-
-        {booking.status !== "cancelled" && (
-          <div className="grid grid-cols-2 gap-3 pt-2">
             <button
-              onClick={() => setEditOpen(true)}
-              className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-ink text-sm font-bold text-white transition active:scale-[0.99]"
+              onClick={() => {
+                setSelectedDueForPay("");
+                setPaymentSheetOpen(true);
+              }}
+              className="flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground shadow"
             >
-              <Pencil className="size-4" /> تعديل
-            </button>
-            <button
-              onClick={() => setCancelOpen(true)}
-              className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 text-sm font-bold text-destructive transition active:scale-[0.99]"
-            >
-              <Trash2 className="size-4" /> إلغاء الحجز
+              <DollarSign className="size-3.5" /> تحصيل
             </button>
           </div>
-        )}
+
+          <div className="card-elev overflow-hidden divide-y divide-stone-line/70">
+            {dues.map((d) => {
+              const dMeta = dueStatusMeta(d.status);
+              const remaining = d.amount - d.paidAmount;
+              return (
+                <div key={d.id} className="p-4 flex items-center justify-between text-xs">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm">{d.title}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${dMeta.tone}`}>
+                        {dMeta.label}
+                      </span>
+                    </div>
+                    <p className="text-muted-foreground mt-0.5">
+                      تاريخ الاستحقاق: {formatDate(d.dueDate, { day: true, month: true, year: true })}
+                    </p>
+                  </div>
+
+                  <div className="text-left shrink-0">
+                    <p className="font-bold text-sm tabular">
+                      {toArabicDigits(d.amount)} <span className="text-[10px] text-muted-foreground">ر.س</span>
+                    </p>
+                    {remaining > 0 && (
+                      <button
+                        onClick={() => {
+                          setSelectedDueForPay(d.id);
+                          setPaymentSheetOpen(true);
+                        }}
+                        className="mt-1 text-[10px] font-bold text-primary hover:underline"
+                      >
+                        سداد ({toArabicDigits(remaining)} متبقي)
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
       </main>
 
-      <BookingSheet open={editOpen} onOpenChange={setEditOpen} editing={booking} />
-      <CancelBookingDialog
-        open={cancelOpen}
-        onOpenChange={setCancelOpen}
-        bookingId={booking.id}
-        recurrenceGroupId={booking.recurrenceGroupId}
-        startAt={booking.startAt}
-      />
+      <PaymentSheet open={paymentSheetOpen} onOpenChange={setPaymentSheetOpen} defaultDueId={selectedDueForPay} />
     </AppShell>
-  );
-}
-
-function MiniStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <div className="rounded-2xl bg-muted/50 p-3">
-      <div className="flex items-center gap-1 text-muted-foreground">{icon}</div>
-      <p className="mt-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</p>
-      <p className="mt-0.5 text-xs font-bold">{value}</p>
-    </div>
   );
 }

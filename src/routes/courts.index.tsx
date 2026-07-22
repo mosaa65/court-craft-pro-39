@@ -1,33 +1,29 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Search, Plus, ChevronLeft } from "lucide-react";
+import { Search, Plus, ChevronLeft, Building2 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { CourtFormSheet } from "@/components/court-form-sheet";
-import { bookingsQuery, courtsQuery, localDateKey } from "@/lib/bookings.queries";
+import { propertiesQuery } from "@/lib/properties.queries";
+import { unitsQuery } from "@/lib/units.queries";
+import { PropertyFormSheet } from "@/components/property-form-sheet";
+import { toArabicDigits, propertyTypeLabel } from "@/lib/types";
 
 export const Route = createFileRoute("/courts/")({
   head: () => ({
     meta: [
-      { title: "الملاعب — إدارة الملاعب الرياضية" },
-      { name: "description", content: "جميع الملاعب وحالتها الحالية والأسعار." },
+      { title: "العقارات — إدارة العقارات المجمعات" },
+      { name: "description", content: "قائمة العقارات والعمائر والفلل والمجمعات السكنية والتجارية." },
     ],
   }),
-  loader: ({ context }) => {
-    context.queryClient.ensureQueryData(courtsQuery);
-    context.queryClient.ensureQueryData(bookingsQuery({ date: localDateKey() }));
-  },
-  component: CourtsPage,
+  component: PropertiesPage,
 });
 
-function CourtsPage() {
-  const { data: courts } = useSuspenseQuery(courtsQuery);
-  const { data: todaysBookings } = useSuspenseQuery(bookingsQuery({ date: localDateKey() }));
+function PropertiesPage() {
   const [q, setQ] = useState("");
   const [addOpen, setAddOpen] = useState(false);
-  const filtered = courts.filter(
-    (c) => c.name.toLowerCase().includes(q.toLowerCase()) || c.sportLabel.includes(q),
-  );
+
+  const { data: properties = [], isLoading } = useQuery(propertiesQuery(q));
+  const { data: units = [] } = useQuery(unitsQuery({}));
 
   return (
     <AppShell>
@@ -35,15 +31,15 @@ function CourtsPage() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-              الفرع الرئيسي
+              المحفظة العقارية
             </p>
-            <h1 className="mt-1 text-xl font-bold tracking-tight">الملاعب</h1>
+            <h1 className="mt-1 text-xl font-bold tracking-tight">العقارات والعمائر</h1>
           </div>
           <button
             onClick={() => setAddOpen(true)}
-            className="flex h-10 items-center gap-1.5 rounded-full bg-ink px-4 text-xs font-bold text-white shadow-[var(--shadow-elev-2)] active:scale-95"
+            className="flex h-10 items-center gap-1.5 rounded-full bg-ink px-4 text-xs font-bold text-white shadow-md active:scale-95 transition"
           >
-            <Plus className="size-4" /> ملعب جديد
+            <Plus className="size-4" /> عقار جديد
           </button>
         </div>
 
@@ -52,58 +48,84 @@ function CourtsPage() {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="ابحث عن ملعب أو رياضة"
-            className="h-12 w-full rounded-2xl border border-stone-line bg-card px-4 pr-11 text-sm font-medium placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
+            placeholder="ابحث باسم العقار، المدينة، أو الحي..."
+            className="h-12 w-full rounded-2xl border border-stone-line bg-card px-4 pr-11 text-sm font-medium placeholder:text-muted-foreground focus:border-primary focus:outline-none"
           />
         </div>
       </header>
 
       <main className="space-y-4 px-5 pt-6">
-        {filtered.map((c, i) => {
-          const bookingCount = todaysBookings.filter(
-            (b) => b.courtId === c.id && b.status !== "cancelled",
-          ).length;
-          const busy = bookingCount > 1;
-          return (
-            <Link
-              to="/courts/$id"
-              params={{ id: c.id }}
-              key={c.id}
-              className="card-elev block overflow-hidden animate-rise transition active:scale-[0.99]"
-              style={{ animationDelay: `${i * 60}ms` }}
+        {isLoading ? (
+          <p className="p-6 text-center text-xs text-muted-foreground">جارِ تحميل العقارات...</p>
+        ) : properties.length === 0 ? (
+          <div className="card-elev flex flex-col items-center gap-3 p-10 text-center">
+            <div className="grid size-14 place-items-center rounded-full bg-primary/10 text-primary">
+              <Building2 className="size-7" />
+            </div>
+            <p className="text-sm font-bold">لا يوجد عقارات بعد</p>
+            <p className="text-xs text-muted-foreground">أضف عقارك الأول لبدء إضافة الوحدات وتأجيرها.</p>
+            <button
+              onClick={() => setAddOpen(true)}
+              className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-bold text-primary-foreground"
             >
-              <div className="relative">
-                <img src={c.image} alt={c.name} loading="lazy" width={1200} height={750} className="aspect-[16/9] w-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-ink/70 via-ink/10 to-transparent" />
-                <div className="absolute inset-x-0 bottom-0 flex items-end justify-between p-4 text-white">
-                  <div>
-                    <span className={"rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider " + (busy ? "bg-primary text-primary-foreground" : "bg-white/85 text-ink")}>
-                      {busy ? "مشغول" : "متاح الآن"}
-                    </span>
-                    <h3 className="mt-2 text-lg font-bold leading-tight">{c.name}</h3>
-                    <p className="mt-0.5 text-xs text-white/70">{c.surface}</p>
-                  </div>
-                  <div className="text-left">
-                    <p className="tabular text-xl font-bold">{c.pricePerHour}</p>
-                    <p className="text-[10px] font-medium text-white/70">ر.س / ساعة</p>
-                  </div>
-                </div>
-              </div>
+              <Plus className="size-3.5" /> إضافة عقار جديد
+            </button>
+          </div>
+        ) : (
+          properties.map((p, i) => {
+            const propUnits = units.filter((u) => u.propertyId === p.id);
+            const rentedCount = propUnits.filter((u) => u.status === "rented").length;
+            const availableCount = propUnits.filter((u) => u.status === "available").length;
 
-              <div className="flex items-center">
-                <div className="grid flex-1 grid-cols-3 divide-x divide-stone-line/70 divide-x-reverse">
-                  <Stat label="حجوزات اليوم" value={String(bookingCount)} />
-                  <Stat label="الفترات المتاحة" value={String(Math.max(0, 14 - bookingCount))} />
-                  <Stat label="السعر" value={`${c.pricePerHour} ر.س`} />
+            return (
+              <Link
+                to="/courts/$id"
+                params={{ id: p.id }}
+                key={p.id}
+                className="card-elev block overflow-hidden animate-rise transition active:scale-[0.99]"
+                style={{ animationDelay: `${i * 60}ms` }}
+              >
+                <div className="relative">
+                  {p.imageUrl ? (
+                    <img src={p.imageUrl} alt={p.name} loading="lazy" className="aspect-[16/9] w-full object-cover" />
+                  ) : (
+                    <div className="aspect-[16/9] w-full bg-gradient-to-br from-ink to-stone-800 flex items-center justify-center text-white/40">
+                      <Building2 className="size-16" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-ink/80 via-ink/20 to-transparent" />
+                  <div className="absolute inset-x-0 bottom-0 flex items-end justify-between p-4 text-white">
+                    <div>
+                      <span className="rounded-full bg-white/85 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-ink">
+                        {propertyTypeLabel(p.type)}
+                      </span>
+                      <h3 className="mt-2 text-lg font-bold leading-tight">{p.name}</h3>
+                      <p className="mt-0.5 text-xs text-white/80">
+                        {p.city} {p.district ? `• حي ${p.district}` : ""}
+                      </p>
+                    </div>
+                    <div className="text-left">
+                      <p className="tabular text-xl font-bold">{toArabicDigits(propUnits.length)}</p>
+                      <p className="text-[10px] font-medium text-white/70">وحدة إجمالية</p>
+                    </div>
+                  </div>
                 </div>
-                <ChevronLeft className="ml-4 size-4 text-muted-foreground" />
-              </div>
-            </Link>
-          );
-        })}
+
+                <div className="flex items-center">
+                  <div className="grid flex-1 grid-cols-3 divide-x divide-stone-line/70 divide-x-reverse">
+                    <Stat label="الوحدات المؤجرة" value={toArabicDigits(rentedCount)} />
+                    <Stat label="الوحدات المتاحة" value={toArabicDigits(availableCount)} />
+                    <Stat label="عدد الطوابق" value={toArabicDigits(p.floorsCount)} />
+                  </div>
+                  <ChevronLeft className="ml-4 size-4 text-muted-foreground" />
+                </div>
+              </Link>
+            );
+          })
+        )}
       </main>
 
-      <CourtFormSheet open={addOpen} onOpenChange={setAddOpen} />
+      <PropertyFormSheet open={addOpen} onOpenChange={setAddOpen} />
     </AppShell>
   );
 }
