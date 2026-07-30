@@ -9,55 +9,25 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as NotificationsRouteImport } from './routes/notifications'
-import { Route as MoreRouteImport } from './routes/more'
-import { Route as ManageRouteImport } from './routes/manage'
-import { Route as FinanceRouteImport } from './routes/finance'
-import { Route as CustomersRouteImport } from './routes/customers'
-import { Route as CourtsRouteImport } from './routes/courts'
-import { Route as CalendarRouteImport } from './routes/calendar'
-import { Route as BookingsRouteImport } from './routes/bookings'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as CustomersIndexRouteImport } from './routes/customers.index'
-import { Route as CourtsIndexRouteImport } from './routes/courts.index'
+import { Route as BookingsRouteImport } from './routes/bookings'
+import { Route as CalendarRouteImport } from './routes/calendar'
+import { Route as CourtsRouteImport } from './routes/courts'
+import { Route as CustomersRouteImport } from './routes/customers'
+import { Route as FinanceRouteImport } from './routes/finance'
+import { Route as ManageRouteImport } from './routes/manage'
+import { Route as MoreRouteImport } from './routes/more'
+import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as BookingsIndexRouteImport } from './routes/bookings.index'
-import { Route as CustomersIdRouteImport } from './routes/customers.$id'
-import { Route as CourtsIdRouteImport } from './routes/courts.$id'
 import { Route as BookingsIdRouteImport } from './routes/bookings.$id'
+import { Route as CourtsIndexRouteImport } from './routes/courts.index'
+import { Route as CourtsIdRouteImport } from './routes/courts.$id'
+import { Route as CustomersIndexRouteImport } from './routes/customers.index'
+import { Route as CustomersIdRouteImport } from './routes/customers.$id'
 
-const NotificationsRoute = NotificationsRouteImport.update({
-  id: '/notifications',
-  path: '/notifications',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MoreRoute = MoreRouteImport.update({
-  id: '/more',
-  path: '/more',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ManageRoute = ManageRouteImport.update({
-  id: '/manage',
-  path: '/manage',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FinanceRoute = FinanceRouteImport.update({
-  id: '/finance',
-  path: '/finance',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CustomersRoute = CustomersRouteImport.update({
-  id: '/customers',
-  path: '/customers',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CourtsRoute = CourtsRouteImport.update({
-  id: '/courts',
-  path: '/courts',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CalendarRoute = CalendarRouteImport.update({
-  id: '/calendar',
-  path: '/calendar',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BookingsRoute = BookingsRouteImport.update({
@@ -65,40 +35,70 @@ const BookingsRoute = BookingsRouteImport.update({
   path: '/bookings',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const CalendarRoute = CalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CustomersIndexRoute = CustomersIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => CustomersRoute,
+const CourtsRoute = CourtsRouteImport.update({
+  id: '/courts',
+  path: '/courts',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const CourtsIndexRoute = CourtsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => CourtsRoute,
+const CustomersRoute = CustomersRouteImport.update({
+  id: '/customers',
+  path: '/customers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FinanceRoute = FinanceRouteImport.update({
+  id: '/finance',
+  path: '/finance',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ManageRoute = ManageRouteImport.update({
+  id: '/manage',
+  path: '/manage',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MoreRoute = MoreRouteImport.update({
+  id: '/more',
+  path: '/more',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const BookingsIndexRoute = BookingsIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => BookingsRoute,
 } as any)
-const CustomersIdRoute = CustomersIdRouteImport.update({
+const BookingsIdRoute = BookingsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
-  getParentRoute: () => CustomersRoute,
+  getParentRoute: () => BookingsRoute,
+} as any)
+const CourtsIndexRoute = CourtsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => CourtsRoute,
 } as any)
 const CourtsIdRoute = CourtsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => CourtsRoute,
 } as any)
-const BookingsIdRoute = BookingsIdRouteImport.update({
+const CustomersIndexRoute = CustomersIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => CustomersRoute,
+} as any)
+const CustomersIdRoute = CustomersIdRouteImport.update({
   id: '/$id',
   path: '/$id',
-  getParentRoute: () => BookingsRoute,
+  getParentRoute: () => CustomersRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -215,53 +215,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/notifications': {
-      id: '/notifications'
-      path: '/notifications'
-      fullPath: '/notifications'
-      preLoaderRoute: typeof NotificationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/more': {
-      id: '/more'
-      path: '/more'
-      fullPath: '/more'
-      preLoaderRoute: typeof MoreRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/manage': {
-      id: '/manage'
-      path: '/manage'
-      fullPath: '/manage'
-      preLoaderRoute: typeof ManageRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/finance': {
-      id: '/finance'
-      path: '/finance'
-      fullPath: '/finance'
-      preLoaderRoute: typeof FinanceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/customers': {
-      id: '/customers'
-      path: '/customers'
-      fullPath: '/customers'
-      preLoaderRoute: typeof CustomersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/courts': {
-      id: '/courts'
-      path: '/courts'
-      fullPath: '/courts'
-      preLoaderRoute: typeof CourtsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/calendar': {
-      id: '/calendar'
-      path: '/calendar'
-      fullPath: '/calendar'
-      preLoaderRoute: typeof CalendarRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/bookings': {
@@ -271,26 +229,54 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BookingsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/calendar': {
+      id: '/calendar'
+      path: '/calendar'
+      fullPath: '/calendar'
+      preLoaderRoute: typeof CalendarRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/customers/': {
-      id: '/customers/'
-      path: '/'
-      fullPath: '/customers/'
-      preLoaderRoute: typeof CustomersIndexRouteImport
-      parentRoute: typeof CustomersRoute
+    '/courts': {
+      id: '/courts'
+      path: '/courts'
+      fullPath: '/courts'
+      preLoaderRoute: typeof CourtsRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/courts/': {
-      id: '/courts/'
-      path: '/'
-      fullPath: '/courts/'
-      preLoaderRoute: typeof CourtsIndexRouteImport
-      parentRoute: typeof CourtsRoute
+    '/customers': {
+      id: '/customers'
+      path: '/customers'
+      fullPath: '/customers'
+      preLoaderRoute: typeof CustomersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/finance': {
+      id: '/finance'
+      path: '/finance'
+      fullPath: '/finance'
+      preLoaderRoute: typeof FinanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manage': {
+      id: '/manage'
+      path: '/manage'
+      fullPath: '/manage'
+      preLoaderRoute: typeof ManageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/more': {
+      id: '/more'
+      path: '/more'
+      fullPath: '/more'
+      preLoaderRoute: typeof MoreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/bookings/': {
       id: '/bookings/'
@@ -299,12 +285,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BookingsIndexRouteImport
       parentRoute: typeof BookingsRoute
     }
-    '/customers/$id': {
-      id: '/customers/$id'
+    '/bookings/$id': {
+      id: '/bookings/$id'
       path: '/$id'
-      fullPath: '/customers/$id'
-      preLoaderRoute: typeof CustomersIdRouteImport
-      parentRoute: typeof CustomersRoute
+      fullPath: '/bookings/$id'
+      preLoaderRoute: typeof BookingsIdRouteImport
+      parentRoute: typeof BookingsRoute
+    }
+    '/courts/': {
+      id: '/courts/'
+      path: '/'
+      fullPath: '/courts/'
+      preLoaderRoute: typeof CourtsIndexRouteImport
+      parentRoute: typeof CourtsRoute
     }
     '/courts/$id': {
       id: '/courts/$id'
@@ -313,12 +306,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CourtsIdRouteImport
       parentRoute: typeof CourtsRoute
     }
-    '/bookings/$id': {
-      id: '/bookings/$id'
+    '/customers/': {
+      id: '/customers/'
+      path: '/'
+      fullPath: '/customers/'
+      preLoaderRoute: typeof CustomersIndexRouteImport
+      parentRoute: typeof CustomersRoute
+    }
+    '/customers/$id': {
+      id: '/customers/$id'
       path: '/$id'
-      fullPath: '/bookings/$id'
-      preLoaderRoute: typeof BookingsIdRouteImport
-      parentRoute: typeof BookingsRoute
+      fullPath: '/customers/$id'
+      preLoaderRoute: typeof CustomersIdRouteImport
+      parentRoute: typeof CustomersRoute
     }
   }
 }
@@ -378,3 +378,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
