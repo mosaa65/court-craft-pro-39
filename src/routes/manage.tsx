@@ -1,69 +1,67 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQuery } from "@tanstack/react-query";
-import { Building2, Users, FileText, Wallet, Wrench, Zap, Settings, ChevronLeft, Plus } from "lucide-react";
+import { LayoutGrid, Users, Settings, ChevronLeft, Plus, Wallet } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { propertiesQuery } from "@/lib/properties.queries";
-import { tenantsQuery } from "@/lib/tenants.queries";
-import { contractsQuery } from "@/lib/contracts.queries";
-import { toArabicDigits } from "@/lib/types";
+import { bookingsQuery, courtsQuery, localDateKey } from "@/lib/bookings.queries";
+import { customersQuery } from "@/lib/customers.queries";
+import { toArabicDigits } from "@/lib/mock";
 
 export const Route = createFileRoute("/manage")({
   head: () => ({
     meta: [
-      { title: "الإدارة — مركز إدارة العقارات والمستأجرين" },
-      { name: "description", content: "مركز الإدارة: العقارات والوحدات والمستأجرين والعقود والمالية والصيانة." },
+      { title: "الإدارة — الملاعب والعملاء والمالية" },
+      { name: "description", content: "مركز الإدارة: الملاعب، العملاء، المالية، والإعدادات في مكان واحد." },
     ],
   }),
+  loader: ({ context }) => {
+    context.queryClient.ensureQueryData(courtsQuery);
+    context.queryClient.ensureQueryData(bookingsQuery({ date: localDateKey() }));
+  },
   component: ManagePage,
 });
 
 function ManagePage() {
-  const { data: properties = [] } = useQuery(propertiesQuery(""));
-  const { data: tenants = [] } = useQuery(tenantsQuery(""));
-  const { data: contracts = [] } = useQuery(contractsQuery({}));
-
-  const activeContractsCount = contracts.filter((c) => c.status === "active").length;
+  const { data: courts } = useSuspenseQuery(courtsQuery);
+  const { data: customers = [] } = useQuery(customersQuery(""));
+  const { data: todaysBookings = [] } = useQuery(bookingsQuery({ date: localDateKey() }));
+  const todayRevenue = todaysBookings
+    .filter((b) => b.status !== "cancelled" && b.status !== "maintenance" && b.status !== "pending")
+    .reduce((s, b) => s + b.price, 0);
 
   return (
     <AppShell>
       <header className="px-6 pb-4 pt-8">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">مركز الإدارة المحترفة</p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight">إدارة أملاكك</h1>
-        <p className="mt-1 text-xs text-muted-foreground">أدوات متكاملة لإدارة محفظتك العقارية وسجلات العقود والمستأجرين.</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">مركز الإدارة</p>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight">الإدارة</h1>
+        <p className="mt-1 text-xs text-muted-foreground">كل ما تحتاج لإدارة أعمالك في مكان واحد.</p>
       </header>
 
-      <main className="space-y-3.5 px-5 pt-4">
+      <main className="space-y-4 px-5 pt-4">
         <HubCard
           to="/courts"
-          icon={<Building2 className="size-6" />}
-          title="العقارات والعمائر"
-          subtitle={`${toArabicDigits(properties.length)} عقار مسجّل في النظام`}
+          icon={<LayoutGrid className="size-6" />}
+          title="الملاعب"
+          subtitle={`${toArabicDigits(courts.length)} ملعب نشط`}
           accent="primary"
+          previewImages={courts.slice(0, 4).map((c) => c.image)}
         />
 
         <HubCard
           to="/customers"
           icon={<Users className="size-6" />}
-          title="المستأجرين"
-          subtitle={`${toArabicDigits(tenants.length)} مستأجر مسجّل`}
+          title="العملاء"
+          subtitle={`${toArabicDigits(customers.length)} عميل مسجّل`}
           accent="ink"
-          cta="إضافة مستأجر"
+          cta="إضافة عميل"
           ctaIcon={<Plus className="size-3.5" />}
-        />
-
-        <HubCard
-          to="/bookings"
-          icon={<FileText className="size-6" />}
-          title="عقود الإيجار"
-          subtitle={`${toArabicDigits(activeContractsCount)} عقد إيجار نشط`}
-          accent="primary"
         />
 
         <HubCard
           to="/finance"
           icon={<Wallet className="size-6" />}
-          title="المالية والاستحقاقات والمصروفات"
-          subtitle="سندات القبض، المصروفات، والتحصيل"
+          title="المالية والفواتير"
+          subtitle={`إيراد اليوم: ${toArabicDigits(todayRevenue)} ر.س`}
           accent="primary"
         />
 
@@ -71,7 +69,7 @@ function ManagePage() {
           to="/more"
           icon={<Settings className="size-6" />}
           title="الإعدادات والمزيد"
-          subtitle="إعدادات المنشأة، الإشعارات، وتخصيص النظام"
+          subtitle="الفرع، الموظفون، الإشعارات"
           accent="muted"
         />
       </main>
@@ -85,14 +83,16 @@ function HubCard({
   title,
   subtitle,
   accent,
+  previewImages,
   cta,
   ctaIcon,
 }: {
-  to: "/courts" | "/customers" | "/bookings" | "/finance" | "/more";
+  to: "/courts" | "/customers" | "/more" | "/finance";
   icon: React.ReactNode;
   title: string;
   subtitle: string;
   accent: "primary" | "ink" | "muted";
+  previewImages?: string[];
   cta?: string;
   ctaIcon?: React.ReactNode;
 }) {
@@ -103,8 +103,8 @@ function HubCard({
 
   return (
     <Link to={to} className="card-elev group block overflow-hidden transition active:scale-[0.99]">
-      <div className="flex items-center gap-4 p-5">
-        <div className={`grid size-14 place-items-center rounded-2xl ${accentClass} shrink-0`}>
+      <div className="flex items-start gap-4 p-5">
+        <div className={`grid size-14 place-items-center rounded-2xl ${accentClass}`}>
           {icon}
         </div>
         <div className="min-w-0 flex-1">
@@ -118,6 +118,13 @@ function HubCard({
         </div>
         <ChevronLeft className="size-4 text-muted-foreground transition group-hover:-translate-x-0.5 group-hover:text-primary" />
       </div>
+      {previewImages && previewImages.length > 0 && (
+        <div className="grid grid-cols-4 gap-0.5 border-t border-stone-line/70">
+          {previewImages.map((img, i) => (
+            <img key={i} src={img} alt="" className="aspect-[4/3] w-full object-cover" />
+          ))}
+        </div>
+      )}
     </Link>
   );
 }

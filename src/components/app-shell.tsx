@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, CalendarDays, LayoutGrid, DollarSign, ReceiptText } from "lucide-react";
+import { Home, CalendarDays, LayoutGrid, Plus, ListChecks } from "lucide-react";
 import { useState, type ReactNode } from "react";
-import { PaymentSheet } from "./payment-sheet";
+import { BookingSheet } from "./booking-sheet";
 import { cn } from "@/lib/utils";
 
 type Tab = {
@@ -15,12 +15,12 @@ type Tab = {
 const tabs: Tab[] = [
   { to: "/", label: "الرئيسية", icon: Home, exact: true },
   { to: "/calendar", label: "التقويم", icon: CalendarDays },
-  { to: "/bookings", label: "الاستحقاقات", icon: ReceiptText, matchPrefixes: ["/bookings"] },
+  { to: "/bookings", label: "الحجوزات", icon: ListChecks },
   { to: "/manage", label: "الإدارة", icon: LayoutGrid, matchPrefixes: ["/manage", "/courts", "/customers", "/finance", "/more"] },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const [paymentSheetOpen, setPaymentSheetOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   return (
@@ -37,12 +37,11 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         <button
           type="button"
-          onClick={() => setPaymentSheetOpen(true)}
-          aria-label="تسجيل سداد"
-          className="grid size-14 -translate-y-6 place-items-center rounded-full bg-primary text-primary-foreground shadow-[var(--shadow-gold)] ring-4 ring-background transition-transform active:scale-95"
-          title="سداد / تحصيل دفعة"
+          onClick={() => setSheetOpen(true)}
+          aria-label="حجز جديد"
+          className="grid size-14 -translate-y-6 place-items-center rounded-full bg-primary text-primary-foreground shadow-[var(--shadow-pitch)] ring-4 ring-background transition-transform active:scale-95"
         >
-          <DollarSign className="size-6" strokeWidth={2.5} />
+          <Plus className="size-6" strokeWidth={2.5} />
         </button>
 
         {tabs.slice(2).map((t) => (
@@ -50,7 +49,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         ))}
       </nav>
 
-      <PaymentSheet open={paymentSheetOpen} onOpenChange={setPaymentSheetOpen} />
+      <BookingSheet open={sheetOpen} onOpenChange={setSheetOpen} />
     </div>
   );
 }
