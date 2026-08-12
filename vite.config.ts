@@ -17,7 +17,8 @@ export default defineConfig({
   },
   vite: {
     plugins: [
-      VitePWA({
+      // Only build the service worker for the browser bundle, never the SSR/server bundle.
+      (VitePWA({
         strategies: "generateSW",
         registerType: "autoUpdate",
         injectRegister: null,
