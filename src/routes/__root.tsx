@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { IosInstallGuide } from "@/components/ios-install-guide";
+import { registerOfflineWorker } from "@/lib/pwa-register";
 
 function NotFoundComponent() {
   return (
@@ -127,6 +128,10 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    registerOfflineWorker();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
