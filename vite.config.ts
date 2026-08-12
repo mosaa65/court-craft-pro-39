@@ -53,7 +53,10 @@ export default defineConfig({
             },
           ],
         },
-      }),
+      }) as unknown as { applyToEnvironment?: (env: { name: string }) => boolean }[]).map((p) => ({
+        ...p,
+        applyToEnvironment: (env: { name: string }) => env.name === "client",
+      })),
     ],
   },
 });
