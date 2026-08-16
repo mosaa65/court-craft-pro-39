@@ -3,6 +3,7 @@ import { Home, CalendarDays, LayoutGrid, Plus, ListChecks } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { BookingSheet } from "./booking-sheet";
 import { cn } from "@/lib/utils";
+import { OfflineStatus } from "./offline-status";
 
 type Tab = {
   to: "/" | "/calendar" | "/bookings" | "/manage";
@@ -25,6 +26,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div dir="rtl" className="min-h-screen bg-background text-foreground font-sans pb-32 selection:bg-primary/20">
+      <OfflineStatus />
       <div className="mx-auto w-full max-w-[440px]">{children}</div>
 
       <nav

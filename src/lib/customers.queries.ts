@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { listCustomersFn, getCustomerFn } from "./customers.functions";
 import type { Customer } from "./mock";
+import { filterOfflineCustomers, readOfflineRow, readOfflineRows, saveOfflineRows } from "./offline-store";
 
 export type CustomerRow = {
   id: string;
@@ -23,8 +24,17 @@ export function mapCustomer(row: CustomerRow): Customer {
 export function customersQuery(search?: string) {
   return queryOptions({
     queryKey: ["customers", search ?? ""],
-    queryFn: async () =>
-      (await listCustomersFn({ data: { search } })).map((r) => mapCustomer(r as CustomerRow)),
+    queryFn: async () => {
+      try {
+        const rows = (await listCustomersFn({ data: { search } })) as CustomerRow[];
+        await saveOfflineRows("customers", rows);
+        return rows.map(mapCustomer);
+      } catch (error) {
+        const rows = filterOfflineCustomers(await readOfflineRows<CustomerRow>("customers"), search);
+        if (!rows.length && !search) throw error;
+        return rows.map(mapCustomer);
+      }
+    },
     staleTime: 30_000,
   });
 }
@@ -32,7 +42,17 @@ export function customersQuery(search?: string) {
 export function customerQuery(id: string) {
   return queryOptions({
     queryKey: ["customer", id],
-    queryFn: async () => mapCustomer((await getCustomerFn({ data: { id } })) as CustomerRow),
+    queryFn: async () => {
+      try {
+        const row = (await getCustomerFn({ data: { id } })) as CustomerRow;
+        await saveOfflineRows("customers", [row]);
+        return mapCustomer(row);
+      } catch (error) {
+        const row = await readOfflineRow<CustomerRow>("customers", id);
+        if (!row) throw error;
+        return mapCustomer(row);
+      }
+    },
     staleTime: 60_000,
   });
 }

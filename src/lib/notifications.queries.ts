@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { listNotificationsFn, unreadCountFn } from "./notifications.functions";
+import { readOfflineRows, saveOfflineRows } from "./offline-store";
 
 export type NotificationRow = {
   id: string;
@@ -13,14 +14,30 @@ export type NotificationRow = {
 
 export const notificationsQuery = queryOptions({
   queryKey: ["notifications"],
-  queryFn: async () => (await listNotificationsFn()) as NotificationRow[],
+  queryFn: async () => {
+    try {
+      const rows = (await listNotificationsFn()) as NotificationRow[];
+      await saveOfflineRows("notifications", rows, true);
+      return rows;
+    } catch (error) {
+      const rows = await readOfflineRows<NotificationRow>("notifications");
+      if (!rows.length) throw error;
+      return rows.sort((a, b) => b.created_at.localeCompare(a.created_at));
+    }
+  },
   staleTime: 15_000,
   refetchInterval: 60_000,
 });
 
 export const unreadCountQuery = queryOptions({
   queryKey: ["notifications", "unread-count"],
-  queryFn: async () => await unreadCountFn(),
+  queryFn: async () => {
+    try {
+      return await unreadCountFn();
+    } catch {
+      return (await readOfflineRows<NotificationRow>("notifications")).filter((row) => !row.read).length;
+    }
+  },
   staleTime: 15_000,
   refetchInterval: 60_000,
 });

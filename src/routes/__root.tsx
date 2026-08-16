@@ -14,6 +14,13 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { IosInstallGuide } from "@/components/ios-install-guide";
 import { registerOfflineWorker } from "@/lib/pwa-register";
+import { listBookingsFn, listCourtsFn } from "@/lib/bookings.functions";
+import { listCustomersFn } from "@/lib/customers.functions";
+import { listNotificationsFn } from "@/lib/notifications.functions";
+import { saveOfflineRows } from "@/lib/offline-store";
+import type { BookingRow, CourtRow } from "@/lib/bookings.queries";
+import type { CustomerRow } from "@/lib/customers.queries";
+import type { NotificationRow } from "@/lib/notifications.queries";
 
 function NotFoundComponent() {
   return (
@@ -131,7 +138,24 @@ function RootComponent() {
 
   useEffect(() => {
     registerOfflineWorker();
-  }, []);
+    const syncOfflineData = async () => {
+      if (!navigator.onLine) return;
+      const results = await Promise.allSettled([
+        listCourtsFn(),
+        listBookingsFn({ data: {} }),
+        listCustomersFn({ data: {} }),
+        listNotificationsFn(),
+      ]);
+      if (results[0].status === "fulfilled") await saveOfflineRows("courts", results[0].value as CourtRow[], true);
+      if (results[1].status === "fulfilled") await saveOfflineRows("bookings", results[1].value as BookingRow[], true);
+      if (results[2].status === "fulfilled") await saveOfflineRows("customers", results[2].value as CustomerRow[], true);
+      if (results[3].status === "fulfilled") await saveOfflineRows("notifications", results[3].value as NotificationRow[], true);
+      await queryClient.invalidateQueries();
+    };
+    void syncOfflineData();
+    window.addEventListener("online", syncOfflineData);
+    return () => window.removeEventListener("online", syncOfflineData);
+  }, [queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>
