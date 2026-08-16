@@ -2,6 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { listBookingsFn, listCourtsFn, getBookingFn, getCourtFn } from "./bookings.functions";
 import type { Booking, BookingStatus, Court } from "./mock";
 import { SPORT_IMAGES } from "./mock";
+import { filterOfflineBookings, readOfflineRow, readOfflineRows, saveOfflineRows } from "./offline-store";
 
 export type CourtRow = {
   id: string;
@@ -82,14 +83,34 @@ export function localDateKey(d: Date = new Date()) {
 
 export const courtsQuery = queryOptions({
   queryKey: ["courts"],
-  queryFn: async () => (await listCourtsFn()).map((r) => mapCourt(r as CourtRow)),
+  queryFn: async () => {
+    try {
+      const rows = (await listCourtsFn()) as CourtRow[];
+      await saveOfflineRows("courts", rows, true);
+      return rows.map(mapCourt);
+    } catch (error) {
+      const rows = await readOfflineRows<CourtRow>("courts");
+      if (!rows.length) throw error;
+      return rows.map(mapCourt);
+    }
+  },
   staleTime: 5 * 60_000,
 });
 
 export function courtQuery(id: string) {
   return queryOptions({
     queryKey: ["court", id],
-    queryFn: async () => mapCourt((await getCourtFn({ data: { id } })) as CourtRow),
+    queryFn: async () => {
+      try {
+        const row = (await getCourtFn({ data: { id } })) as CourtRow;
+        await saveOfflineRows("courts", [row]);
+        return mapCourt(row);
+      } catch (error) {
+        const row = await readOfflineRow<CourtRow>("courts", id);
+        if (!row) throw error;
+        return mapCourt(row);
+      }
+    },
     staleTime: 60_000,
   });
 }
@@ -106,8 +127,17 @@ export type BookingsFilter = {
 export function bookingsQuery(filter: BookingsFilter = {}) {
   return queryOptions({
     queryKey: ["bookings", filter],
-    queryFn: async () =>
-      (await listBookingsFn({ data: filter })).map((r) => mapBooking(r as BookingRow)),
+    queryFn: async () => {
+      try {
+        const rows = (await listBookingsFn({ data: filter })) as BookingRow[];
+        await saveOfflineRows("bookings", rows);
+        return rows.map(mapBooking);
+      } catch (error) {
+        const rows = filterOfflineBookings(await readOfflineRows<BookingRow>("bookings"), filter);
+        if (!rows.length && !filter.date && !filter.search && !filter.courtId && !filter.phone) throw error;
+        return rows.map(mapBooking);
+      }
+    },
     staleTime: 15_000,
   });
 }
@@ -115,7 +145,17 @@ export function bookingsQuery(filter: BookingsFilter = {}) {
 export function bookingQuery(id: string) {
   return queryOptions({
     queryKey: ["booking", id],
-    queryFn: async () => mapBooking((await getBookingFn({ data: { id } })) as BookingRow),
+    queryFn: async () => {
+      try {
+        const row = (await getBookingFn({ data: { id } })) as BookingRow;
+        await saveOfflineRows("bookings", [row]);
+        return mapBooking(row);
+      } catch (error) {
+        const row = await readOfflineRow<BookingRow>("bookings", id);
+        if (!row) throw error;
+        return mapBooking(row);
+      }
+    },
     staleTime: 15_000,
   });
 }

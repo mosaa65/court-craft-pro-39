@@ -27,14 +27,14 @@ export default defineConfig({
         devOptions: { enabled: false },
         manifest: false, // we ship public/manifest.webmanifest ourselves
         workbox: {
-          globPatterns: ["**/*.{js,css,ico,png,svg,woff2}"],
+          globPatterns: ["**/*.{html,js,css,ico,png,jpg,jpeg,svg,webp,woff2}"],
           navigateFallbackDenylist: [/^\/~oauth/, /^\/api\//],
           cleanupOutdatedCaches: true,
           clientsClaim: true,
           skipWaiting: true,
           runtimeCaching: [
             {
-              urlPattern: ({ request }) => request.mode === "navigate",
+              urlPattern: ({ url, request }) => request.mode === "navigate" && !url.pathname.startsWith("/api/"),
               handler: "NetworkFirst",
               options: {
                 cacheName: "html-navigations",

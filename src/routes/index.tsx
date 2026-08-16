@@ -15,9 +15,11 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "لوحة تحكم أنيقة لإدارة الحجوزات والملاعب الرياضية." },
     ],
   }),
-  loader: ({ context }) => {
-    context.queryClient.ensureQueryData(courtsQuery);
-    context.queryClient.ensureQueryData(bookingsQuery({ date: localDateKey() }));
+  loader: async ({ context }) => {
+    await Promise.all([
+      context.queryClient.ensureQueryData(courtsQuery),
+      context.queryClient.ensureQueryData(bookingsQuery({ date: localDateKey() })),
+    ]);
   },
   component: Dashboard,
   pendingComponent: () => (
