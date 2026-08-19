@@ -44,7 +44,8 @@ export default defineConfig({
             },
             {
               urlPattern: ({ url, request, sameOrigin }) =>
-                sameOrigin && !url.pathname.startsWith("/api/") && ["style", "script", "font", "image"].includes(request.destination),
+                request.destination === "image" ||
+                (sameOrigin && !url.pathname.startsWith("/api/") && ["style", "script", "font"].includes(request.destination)),
               handler: "CacheFirst",
               options: {
                 cacheName: "static-assets",
