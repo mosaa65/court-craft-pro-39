@@ -36,6 +36,8 @@ export function customersQuery(search?: string) {
       }
     },
     staleTime: 30_000,
+    networkMode: "always",
+    retry: false,
   });
 }
 
@@ -54,5 +56,7 @@ export function customerQuery(id: string) {
       }
     },
     staleTime: 60_000,
+    networkMode: "always",
+    retry: false,
   });
 }

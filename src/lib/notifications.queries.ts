@@ -27,6 +27,8 @@ export const notificationsQuery = queryOptions({
   },
   staleTime: 15_000,
   refetchInterval: 60_000,
+  networkMode: "always",
+  retry: false,
 });
 
 export const unreadCountQuery = queryOptions({
@@ -40,4 +42,6 @@ export const unreadCountQuery = queryOptions({
   },
   staleTime: 15_000,
   refetchInterval: 60_000,
+  networkMode: "always",
+  retry: false,
 });

@@ -14,9 +14,11 @@ export const Route = createFileRoute("/manage")({
       { name: "description", content: "مركز الإدارة: الملاعب، العملاء، المالية، والإعدادات في مكان واحد." },
     ],
   }),
-  loader: ({ context }) => {
-    context.queryClient.ensureQueryData(courtsQuery);
-    context.queryClient.ensureQueryData(bookingsQuery({ date: localDateKey() }));
+  loader: async ({ context }) => {
+    await Promise.all([
+      context.queryClient.ensureQueryData(courtsQuery),
+      context.queryClient.ensureQueryData(bookingsQuery({ date: localDateKey() })),
+    ]);
   },
   component: ManagePage,
 });

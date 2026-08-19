@@ -95,6 +95,8 @@ export const courtsQuery = queryOptions({
     }
   },
   staleTime: 5 * 60_000,
+  networkMode: "always",
+  retry: false,
 });
 
 export function courtQuery(id: string) {
@@ -112,6 +114,8 @@ export function courtQuery(id: string) {
       }
     },
     staleTime: 60_000,
+    networkMode: "always",
+    retry: false,
   });
 }
 
@@ -139,6 +143,8 @@ export function bookingsQuery(filter: BookingsFilter = {}) {
       }
     },
     staleTime: 15_000,
+    networkMode: "always",
+    retry: false,
   });
 }
 
@@ -157,5 +163,7 @@ export function bookingQuery(id: string) {
       }
     },
     staleTime: 15_000,
+    networkMode: "always",
+    retry: false,
   });
 }

@@ -39,9 +39,11 @@ export const Route = createFileRoute("/finance")({
       { name: "description", content: "لوحة مالية للإيرادات والفواتير الصادرة عن الحجوزات." },
     ],
   }),
-  loader: ({ context }) => {
-    context.queryClient.ensureQueryData(courtsQuery);
-    context.queryClient.ensureQueryData(bookingsQuery({}));
+  loader: async ({ context }) => {
+    await Promise.all([
+      context.queryClient.ensureQueryData(courtsQuery),
+      context.queryClient.ensureQueryData(bookingsQuery({})),
+    ]);
   },
   component: FinancePage,
 });

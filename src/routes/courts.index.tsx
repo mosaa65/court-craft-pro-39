@@ -13,9 +13,11 @@ export const Route = createFileRoute("/courts/")({
       { name: "description", content: "جميع الملاعب وحالتها الحالية والأسعار." },
     ],
   }),
-  loader: ({ context }) => {
-    context.queryClient.ensureQueryData(courtsQuery);
-    context.queryClient.ensureQueryData(bookingsQuery({ date: localDateKey() }));
+  loader: async ({ context }) => {
+    await Promise.all([
+      context.queryClient.ensureQueryData(courtsQuery),
+      context.queryClient.ensureQueryData(bookingsQuery({ date: localDateKey() })),
+    ]);
   },
   component: CourtsPage,
 });

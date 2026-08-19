@@ -14,9 +14,11 @@ export const Route = createFileRoute("/calendar")({
       { name: "description", content: "تقويم يومي احترافي لعرض حجوزات الملاعب وحالة كل ساعة." },
     ],
   }),
-  loader: ({ context }) => {
-    context.queryClient.ensureQueryData(courtsQuery);
-    context.queryClient.ensureQueryData(bookingsQuery({ date: localDateKey() }));
+  loader: async ({ context }) => {
+    await Promise.all([
+      context.queryClient.ensureQueryData(courtsQuery),
+      context.queryClient.ensureQueryData(bookingsQuery({ date: localDateKey() })),
+    ]);
   },
   component: CalendarPage,
 });
