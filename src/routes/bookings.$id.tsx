@@ -35,9 +35,11 @@ export const Route = createFileRoute("/bookings/$id")({
       { name: "description", content: "تفاصيل الحجز الكاملة مع إمكانية التعديل والإلغاء." },
     ],
   }),
-  loader: ({ context, params }) => {
-    context.queryClient.ensureQueryData(bookingQuery(params.id));
-    context.queryClient.ensureQueryData(courtsQuery);
+  loader: async ({ context, params }) => {
+    await Promise.all([
+      context.queryClient.ensureQueryData(bookingQuery(params.id)),
+      context.queryClient.ensureQueryData(courtsQuery),
+    ]);
   },
   component: BookingDetailPage,
   errorComponent: ({ error }) => (

@@ -1,7 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { listCustomersFn, getCustomerFn } from "./customers.functions";
 import type { Customer } from "./mock";
-import { filterOfflineCustomers, readOfflineRow, readOfflineRows, saveOfflineRows } from "./offline-store";
+import { filterOfflineCustomers, hasOfflineStorage, readOfflineRow, readOfflineRows, saveOfflineRows } from "./offline-store";
 
 export type CustomerRow = {
   id: string;
@@ -31,11 +31,13 @@ export function customersQuery(search?: string) {
         return rows.map(mapCustomer);
       } catch (error) {
         const rows = filterOfflineCustomers(await readOfflineRows<CustomerRow>("customers"), search);
-        if (!rows.length && !search) throw error;
+        if (!hasOfflineStorage()) throw error;
         return rows.map(mapCustomer);
       }
     },
     staleTime: 30_000,
+    networkMode: "always",
+    retry: false,
   });
 }
 
@@ -54,5 +56,7 @@ export function customerQuery(id: string) {
       }
     },
     staleTime: 60_000,
+    networkMode: "always",
+    retry: false,
   });
 }

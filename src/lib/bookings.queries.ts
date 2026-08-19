@@ -2,7 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { listBookingsFn, listCourtsFn, getBookingFn, getCourtFn } from "./bookings.functions";
 import type { Booking, BookingStatus, Court } from "./mock";
 import { SPORT_IMAGES } from "./mock";
-import { filterOfflineBookings, readOfflineRow, readOfflineRows, saveOfflineRows } from "./offline-store";
+import { filterOfflineBookings, hasOfflineStorage, readOfflineRow, readOfflineRows, saveOfflineRows } from "./offline-store";
 
 export type CourtRow = {
   id: string;
@@ -90,11 +90,13 @@ export const courtsQuery = queryOptions({
       return rows.map(mapCourt);
     } catch (error) {
       const rows = await readOfflineRows<CourtRow>("courts");
-      if (!rows.length) throw error;
+      if (!hasOfflineStorage()) throw error;
       return rows.map(mapCourt);
     }
   },
   staleTime: 5 * 60_000,
+  networkMode: "always",
+  retry: false,
 });
 
 export function courtQuery(id: string) {
@@ -112,6 +114,8 @@ export function courtQuery(id: string) {
       }
     },
     staleTime: 60_000,
+    networkMode: "always",
+    retry: false,
   });
 }
 
@@ -134,11 +138,13 @@ export function bookingsQuery(filter: BookingsFilter = {}) {
         return rows.map(mapBooking);
       } catch (error) {
         const rows = filterOfflineBookings(await readOfflineRows<BookingRow>("bookings"), filter);
-        if (!rows.length && !filter.date && !filter.search && !filter.courtId && !filter.phone) throw error;
+        if (!hasOfflineStorage()) throw error;
         return rows.map(mapBooking);
       }
     },
     staleTime: 15_000,
+    networkMode: "always",
+    retry: false,
   });
 }
 
@@ -157,5 +163,7 @@ export function bookingQuery(id: string) {
       }
     },
     staleTime: 15_000,
+    networkMode: "always",
+    retry: false,
   });
 }

@@ -16,9 +16,7 @@ export const Route = createFileRoute("/bookings/")({
       { name: "description", content: "قائمة كل الحجوزات مع بحث وتصفية حسب التاريخ والملعب والحالة والمدة." },
     ],
   }),
-  loader: ({ context }) => {
-    context.queryClient.ensureQueryData(courtsQuery);
-  },
+  loader: ({ context }) => context.queryClient.ensureQueryData(courtsQuery),
   component: BookingsPage,
 });
 

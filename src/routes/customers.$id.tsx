@@ -17,9 +17,11 @@ export const Route = createFileRoute("/customers/$id")({
       { name: "description", content: "بيانات العميل وسجل الحجوزات." },
     ],
   }),
-  loader: ({ context, params }) => {
-    context.queryClient.ensureQueryData(customerQuery(params.id));
-    context.queryClient.ensureQueryData(courtsQuery);
+  loader: async ({ context, params }) => {
+    await Promise.all([
+      context.queryClient.ensureQueryData(customerQuery(params.id)),
+      context.queryClient.ensureQueryData(courtsQuery),
+    ]);
   },
   component: CustomerDetailPage,
   errorComponent: ({ error }) => (

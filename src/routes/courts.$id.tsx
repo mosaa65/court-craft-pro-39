@@ -16,9 +16,11 @@ export const Route = createFileRoute("/courts/$id")({
       { name: "description", content: "تفاصيل الملعب والحجوزات القادمة والإحصائيات." },
     ],
   }),
-  loader: ({ context, params }) => {
-    context.queryClient.ensureQueryData(courtQuery(params.id));
-    context.queryClient.ensureQueryData(bookingsQuery({ courtId: params.id, date: localDateKey() }));
+  loader: async ({ context, params }) => {
+    await Promise.all([
+      context.queryClient.ensureQueryData(courtQuery(params.id)),
+      context.queryClient.ensureQueryData(bookingsQuery({ courtId: params.id, date: localDateKey() })),
+    ]);
   },
   component: CourtDetailPage,
   errorComponent: ({ error }) => (
