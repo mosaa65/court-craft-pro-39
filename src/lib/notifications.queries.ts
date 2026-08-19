@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { listNotificationsFn, unreadCountFn } from "./notifications.functions";
-import { readOfflineRows, saveOfflineRows } from "./offline-store";
+import { hasOfflineStorage, readOfflineRows, saveOfflineRows } from "./offline-store";
 
 export type NotificationRow = {
   id: string;
@@ -21,7 +21,7 @@ export const notificationsQuery = queryOptions({
       return rows;
     } catch (error) {
       const rows = await readOfflineRows<NotificationRow>("notifications");
-      if (!rows.length) throw error;
+      if (!hasOfflineStorage()) throw error;
       return rows.sort((a, b) => b.created_at.localeCompare(a.created_at));
     }
   },

@@ -26,6 +26,10 @@ function canUseOfflineDb() {
   return typeof window !== "undefined" && "indexedDB" in window;
 }
 
+export function hasOfflineStorage() {
+  return canUseOfflineDb();
+}
+
 export async function saveOfflineRows<T extends OfflineRow>(storeName: StoreName, rows: T[], replace = false) {
   if (!canUseOfflineDb()) return;
   const db = await openOfflineDb();
@@ -68,7 +72,11 @@ export function filterOfflineBookings(rows: BookingRow[], filter: BookingsFilter
   const search = filter.search?.trim().toLocaleLowerCase("ar") ?? "";
   return rows
     .filter((row) => {
-      if (filter.date && row.start_at.slice(0, 10) !== filter.date) return false;
+      if (filter.date) {
+        const date = new Date(row.start_at);
+        const localDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+        if (localDate !== filter.date) return false;
+      }
       if (filter.courtId && row.court_id !== filter.courtId) return false;
       if (filter.status && filter.status !== "all" && row.status !== filter.status) return false;
       if (filter.phone && row.customer_phone !== filter.phone) return false;
