@@ -102,11 +102,10 @@ export function mapBooking(row: BookingRow): Booking {
 }
 
 export function localDateKey(d: Date = new Date()) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  const p = zonedParts(d);
+  return `${p.year}-${p.month}-${p.day}`;
 }
+
 
 export const courtsQuery = queryOptions({
   queryKey: ["courts"],
