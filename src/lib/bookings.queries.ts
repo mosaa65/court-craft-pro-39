@@ -48,11 +48,38 @@ export function mapCourt(row: CourtRow): Court {
   };
 }
 
+/** Fixed app timezone so SSR and browser render identical times (no hydration mismatch). */
+export const APP_TIME_ZONE = "Asia/Aden";
+
+const partsFormatter = new Intl.DateTimeFormat("en-GB", {
+  timeZone: APP_TIME_ZONE,
+  hour12: false,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+export function zonedParts(d: Date) {
+  const parts = Object.fromEntries(partsFormatter.formatToParts(d).map((p) => [p.type, p.value]));
+  return {
+    year: parts.year!,
+    month: parts.month!,
+    day: parts.day!,
+    hour: parts.hour === "24" ? "00" : parts.hour!,
+    minute: parts.minute!,
+  };
+}
+
 export function mapBooking(row: BookingRow): Booking {
   const s = new Date(row.start_at);
   const e = new Date(row.end_at);
-  const hhmm = (d: Date) =>
-    `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  const hhmm = (d: Date) => {
+    const p = zonedParts(d);
+    return `${p.hour}:${p.minute}`;
+  };
+
   return {
     id: row.id,
     courtId: row.court_id,
