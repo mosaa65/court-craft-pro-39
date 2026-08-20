@@ -38,10 +38,25 @@ export default defineConfig({
               handler: "NetworkFirst",
               options: {
                 cacheName: "html-navigations",
-                networkTimeoutSeconds: 5,
-                expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 7 },
+                networkTimeoutSeconds: 4,
+                expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30 },
+                plugins: [
+                  {
+                    // Offline: fall back to any cached page (prefer the home shell) so the
+                    // app boots instead of showing the browser's "no internet" page.
+                    handlerDidError: async () => {
+                      const cache = await caches.open("html-navigations");
+                      const home = await cache.match("/");
+                      if (home) return home;
+                      const keys = await cache.keys();
+                      if (keys.length) return (await cache.match(keys[0])) ?? Response.error();
+                      return Response.error();
+                    },
+                  },
+                ],
               },
             },
+
             {
               urlPattern: ({ url, request, sameOrigin }) =>
                 request.destination === "image" ||
